@@ -10,6 +10,21 @@
         "type": "string",
         "required": true,
         "default": "Example Dynamic Platform"
+      },
+      "access_token": {
+        "title": "AccessToken",
+        "type": "string",
+        "required": true,
+        "default": ""
+      },
+      "accessoryNames": {
+        "title": "Accessories Names",
+        "type": "array",
+        "required": false,
+        "items": {
+          "title": "Accessory name",
+          "type": "string"
+        }
       }
     }
   }
