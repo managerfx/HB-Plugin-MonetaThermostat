@@ -1,7 +1,5 @@
 import { API } from 'homebridge';
-import { DELTA_PLATFORM_NAME, PLATFORM_NAME } from './settings';
-import { ExampleHomebridgePlatform } from './platform';
-import { ExampleThermostatAccessory } from './thermostatAccessory';
+import { DELTA_PLATFORM_NAME } from './settings';
 import { DeltaThermostatPlatform } from './delta-thermostat/deltaPlatform';
 
 /**

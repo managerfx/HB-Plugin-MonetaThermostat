@@ -1,7 +1,6 @@
 import { Service, PlatformAccessory } from 'homebridge';
-import { SeasonName } from '../models/full_bo.response';
-import { ExampleHomebridgePlatform } from '../platform';
 import { ThermostatProvider } from '../thermostat.provider';
+import { DeltaThermostatPlatform } from './deltaPlatform';
 
 /**
  * Platform Accessory
@@ -17,7 +16,7 @@ export class DeltaThermostatPlatformAccessory {
   //   };
 
   constructor(
-    private readonly platform: ExampleHomebridgePlatform,
+    private readonly platform: DeltaThermostatPlatform,
     private readonly accessory: PlatformAccessory,
     private readonly provider: ThermostatProvider,
     private readonly zoneId: string

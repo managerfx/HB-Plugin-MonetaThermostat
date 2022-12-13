@@ -7,7 +7,7 @@ import {
   Service,
   Characteristic,
 } from 'homebridge';
-import { DELTA_PLATFORM_NAME, PLATFORM_NAME, PLUGIN_NAME } from '../settings';
+import { DELTA_PLATFORM_NAME, PLUGIN_NAME } from '../settings';
 import { DeltaThermostatPlatformAccessory } from './deltaPlatformAccessory';
 import { ThermostatProvider } from '../thermostat.provider';
 import { ThermostatPlatformConfig } from '../models/thermostat-config';
@@ -112,7 +112,7 @@ export class DeltaThermostatPlatform implements DynamicPlatformPlugin {
         new DeltaThermostatPlatformAccessory(this, accessory, this.provider, device.zoneId);
 
         // link the accessory to your platform
-        this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+        this.api.registerPlatformAccessories(PLUGIN_NAME, DELTA_PLATFORM_NAME, [accessory]);
       }
     }
   }
