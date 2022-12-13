@@ -1,9 +1,7 @@
 import axios from 'axios';
 import { API, Logger } from 'homebridge';
-import { compileFunction } from 'vm';
 import { addMinutes as addToDate, getRandomInt } from './misc.fuctions';
 import { FullBoResponse } from './models/full_bo.response';
-import { FULL_BO_RESP } from './models/res_example';
 import { ThermostatPlatformConfig } from './models/thermostat-config';
 
 export class ThermostatProvider {
