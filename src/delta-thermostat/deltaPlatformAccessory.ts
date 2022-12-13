@@ -107,7 +107,7 @@ export class DeltaThermostatPlatformAccessory {
     this.platform.log.debug('Triggered GET TargetHeatingCoolingState');
     // set this to a valid value for TargetHeatingCoolingState
     const currentZone = this.provider.getCurrentZoneInfo(this.zoneId);
-    if (currentZone.atHome && currentZone.temperature < currentZone.effectiveSetpoint) {
+    if (currentZone.atHome) {
       return this.provider.fullThemostatData?.category === 'heating'
         ? this.platform.Characteristic.CurrentHeatingCoolingState.HEAT
         : this.platform.Characteristic.CurrentHeatingCoolingState.COOL;
