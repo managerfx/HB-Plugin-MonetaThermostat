@@ -1,4 +1,5 @@
 import { Service, PlatformAccessory } from 'homebridge';
+import { ZoneMode } from '../models/full_bo.response';
 import { ThermostatProvider } from '../thermostat.provider';
 import { DeltaThermostatPlatform } from './deltaPlatform';
 
@@ -24,9 +25,9 @@ export class DeltaThermostatPlatformAccessory {
     // set accessory information
     this.accessory
       .getService(this.platform.Service.AccessoryInformation)!
-      .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Default-Manufacturer')
-      .setCharacteristic(this.platform.Characteristic.Model, 'Default-Model')
-      .setCharacteristic(this.platform.Characteristic.SerialNumber, 'Default-Serial');
+      .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Delta Controls')
+      .setCharacteristic(this.platform.Characteristic.Model, 'eZNT-T100')
+      .setCharacteristic(this.platform.Characteristic.SerialNumber, 'Overlay 045');
 
     // get the LightBulb service if it exists, otherwise create a new LightBulb service
     // you can create multiple services for each accessory
@@ -36,10 +37,12 @@ export class DeltaThermostatPlatformAccessory {
 
     // set the service name, this is what is displayed as the default name on the Home app
     // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
-    this.service.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.exampleDisplayName);
+    this.service.setCharacteristic(
+      this.platform.Characteristic.Name,
+      accessory.context.device.exampleDisplayName || this.accessory.displayName
+    );
 
     // each service must implement at-minimum the "required characteristics" for the given service type
-    // see https://developers.homebridge.io/#/service/Lightbulb
 
     this.service
       .getCharacteristic(this.platform.Characteristic.CurrentHeatingCoolingState)
@@ -61,8 +64,8 @@ export class DeltaThermostatPlatformAccessory {
 
     this.service
       .getCharacteristic(this.platform.Characteristic.TemperatureDisplayUnits)
-      .onGet(this.handleTemperatureDisplayUnitsGet.bind(this))
-      .onSet(this.handleTemperatureDisplayUnitsSet.bind(this));
+      .onGet(this.handleTemperatureDisplayUnitsGet.bind(this));
+    // .onSet(this.handleTemperatureDisplayUnitsSet.bind(this));
 
     // this.service
     //   .getCharacteristic(this.platform.Characteristic.CoolingThresholdTemperature)
@@ -108,11 +111,15 @@ export class DeltaThermostatPlatformAccessory {
     // set this to a valid value for TargetHeatingCoolingState
     const currentZone = this.provider.getCurrentZoneInfo(this.zoneId);
     if (currentZone.atHome) {
-      return this.provider.fullThemostatData?.category === 'heating'
-        ? this.platform.Characteristic.CurrentHeatingCoolingState.HEAT
-        : this.platform.Characteristic.CurrentHeatingCoolingState.COOL;
+      if (currentZone?.mode === ZoneMode.Auto) {
+        return this.platform.Characteristic.TargetHeatingCoolingState.AUTO;
+      } else {
+        return this.provider.fullThemostatData?.category === 'heating'
+          ? this.platform.Characteristic.TargetHeatingCoolingState.HEAT
+          : this.platform.Characteristic.TargetHeatingCoolingState.COOL;
+      }
     }
-    return this.platform.Characteristic.CurrentHeatingCoolingState.OFF;
+    return this.platform.Characteristic.TargetHeatingCoolingState.OFF;
   }
 
   /**
@@ -128,7 +135,7 @@ export class DeltaThermostatPlatformAccessory {
   handleCurrentTemperatureGet() {
     this.platform.log.debug('Triggered GET CurrentTemperature');
     // set this to a valid value for CurrentTemperature
-    return this.provider.getCurrentZoneInfo(this.zoneId)?.temperature || 0;
+    return this.provider.getCurrentZoneInfo(this.zoneId)?.temperature || -99;
   }
 
   /**
@@ -137,7 +144,7 @@ export class DeltaThermostatPlatformAccessory {
   private handleTargetTemperatureGet() {
     this.platform.log.debug('Triggered GET TargetTemperature');
     // set this to a valid value for TargetTemperature
-    return this.provider.getCurrentZoneInfo(this.zoneId)?.effectiveSetpoint;
+    return this.provider.getCurrentZoneInfo(this.zoneId)?.effectiveSetpoint || -99;
   }
 
   /**
@@ -159,7 +166,7 @@ export class DeltaThermostatPlatformAccessory {
   /**
    * Handle requests to set the 'Temperature Display Units' characteristic
    */
-  private handleTemperatureDisplayUnitsSet(value: number) {
-    this.platform.log.debug('Triggered SET TemperatureDisplayUnits:', value);
-  }
+  // private handleTemperatureDisplayUnitsSet(value: number) {
+  //   this.platform.log.debug('Triggered SET TemperatureDisplayUnits:', value);
+  // }
 }
