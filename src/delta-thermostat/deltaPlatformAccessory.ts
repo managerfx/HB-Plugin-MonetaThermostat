@@ -1,5 +1,5 @@
-import { Service, PlatformAccessory } from 'homebridge';
-import { ZoneMode } from '../models/full_bo.response';
+import { Service, PlatformAccessory, Characteristic, Logger } from 'homebridge';
+import { Category, FullBoResponse, Zone, ZoneMode } from '../models/full_bo.response';
 import { ThermostatProvider } from '../thermostat.provider';
 import { DeltaThermostatPlatform } from './deltaPlatform';
 
@@ -9,12 +9,18 @@ import { DeltaThermostatPlatform } from './deltaPlatform';
  * Each accessory may expose multiple services of different service types.
  */
 export class DeltaThermostatPlatformAccessory {
-  private service: Service;
-  //   private readonly COOLING_STATE_MAP = {
-  //     [SeasonName.Summer]: this.platform.Characteristic.CurrentHeatingCoolingState.COOL,
-  //     [SeasonName.Winter]: this.platform.Characteristic.CurrentHeatingCoolingState.HEAT,
-  //     ['OFF']: this.platform.Characteristic.CurrentHeatingCoolingState.OFF,
-  //   };
+  private serviceAccessory: Service;
+  private readonly Characteristic = this.platform.Characteristic;
+  private readonly Service = this.platform.Service;
+  private readonly log = this.platform.log;
+
+  private get currentZoneData(): Zone {
+    return this.provider.getCurrentZoneInfo(this.zoneId);
+  }
+
+  private get fullData(): FullBoResponse {
+    return this.provider.fullThemostatData() as FullBoResponse;
+  }
 
   constructor(
     private readonly platform: DeltaThermostatPlatform,
@@ -24,141 +30,135 @@ export class DeltaThermostatPlatformAccessory {
   ) {
     // set accessory information
     this.accessory
-      .getService(this.platform.Service.AccessoryInformation)!
-      .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Delta Controls')
-      .setCharacteristic(this.platform.Characteristic.Model, 'eZNT-T100')
-      .setCharacteristic(this.platform.Characteristic.SerialNumber, 'Overlay 045');
+      .getService(this.Service.AccessoryInformation)!
+      .setCharacteristic(this.Characteristic.Manufacturer, 'Delta Controls')
+      .setCharacteristic(this.Characteristic.Model, 'eZNT-T100')
+      .setCharacteristic(this.Characteristic.SerialNumber, 'Overlay 045');
 
     // get the LightBulb service if it exists, otherwise create a new LightBulb service
     // you can create multiple services for each accessory
-    this.service =
-      this.accessory.getService(this.platform.Service.Thermostat) ||
-      this.accessory.addService(this.platform.Service.Thermostat, this.accessory.displayName, 'test');
+    this.serviceAccessory =
+      this.accessory.getService(this.Service.Thermostat) ||
+      this.accessory.addService(this.Service.Thermostat, this.accessory.displayName);
 
     // set the service name, this is what is displayed as the default name on the Home app
     // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
-    this.service.setCharacteristic(
-      this.platform.Characteristic.Name,
+    this.serviceAccessory.setCharacteristic(
+      this.Characteristic.Name,
       accessory.context.device.exampleDisplayName || this.accessory.displayName
     );
 
     // each service must implement at-minimum the "required characteristics" for the given service type
 
-    this.service
-      .getCharacteristic(this.platform.Characteristic.CurrentHeatingCoolingState)
+    this.serviceAccessory
+      .getCharacteristic(this.Characteristic.CurrentHeatingCoolingState)
       .onGet(this.handleCurrentHeatingCoolingStateGet.bind(this));
 
-    this.service
-      .getCharacteristic(this.platform.Characteristic.TargetHeatingCoolingState)
+    this.serviceAccessory
+      .getCharacteristic(this.Characteristic.TargetHeatingCoolingState)
       .onGet(this.handleTargetHeatingCoolingStateGet.bind(this))
       .onSet(this.handleTargetHeatingCoolingStateSet.bind(this));
 
-    this.service
-      .getCharacteristic(this.platform.Characteristic.CurrentTemperature)
+    this.serviceAccessory
+      .getCharacteristic(this.Characteristic.CurrentTemperature)
       .onGet(this.handleCurrentTemperatureGet.bind(this));
+    this.Characteristic.TargetTemperature;
 
-    this.service
-      .getCharacteristic(this.platform.Characteristic.TargetTemperature)
+    this.serviceAccessory
+      .getCharacteristic(this.Characteristic.TargetTemperature)
+      .setProps({
+        maxValue: this.fullData.limits.present_max_temp,
+        minValue: this.fullData.limits.present_min_temp,
+        minStep: this.fullData.limits.step_value,
+      })
       .onGet(this.handleTargetTemperatureGet.bind(this))
       .onSet(this.handleTargetTemperatureSet.bind(this));
 
-    this.service
-      .getCharacteristic(this.platform.Characteristic.TemperatureDisplayUnits)
+    this.serviceAccessory
+      .getCharacteristic(this.Characteristic.TemperatureDisplayUnits)
       .onGet(this.handleTemperatureDisplayUnitsGet.bind(this));
     // .onSet(this.handleTemperatureDisplayUnitsSet.bind(this));
 
-    // this.service
-    //   .getCharacteristic(this.platform.Characteristic.CoolingThresholdTemperature)
-    //   .onGet(this.handleTemperatureDisplayUnitsGet.bind(this))
-    //   .onSet(this.handleTemperatureDisplayUnitsSet.bind(this));
+    this.serviceAccessory
+      .getCharacteristic(this.Characteristic.HeatingThresholdTemperature)
+      .onGet(this.handleHeatingThresholdTemperatureGet.bind(this));
+    // .onSet(this.handleTemperatureDisplayUnitsSet.bind(this));
   }
 
-  //   private handleHeatingThresholdTemperatureGet() {
-  //     this.platform.log.debug('Triggered GET HeatingThresholdTemperature');
-  //     const limits = this.provider.fullThemostatData?.manual_limits;
-
-  //     // return {
-  //     //   minValue: limits?.min_temp,
-  //     //   maxValue: limits?.max_temp,
-  //     //   minStep: limits?.step_value,
-  //     // };
-  //     return 25;
-  //   }
+  private handleHeatingThresholdTemperatureGet() {
+    this.log.debug('Triggered GET HeatingThresholdTemperature');
+    // const limits = this.fullData?.manual_limits;
+    return 18;
+  }
 
   //   private handleHeatingThresholdTemperatureSet(value) {
-  //     this.platform.log.debug('Triggered SET HeatingThresholdTemperature');
+  //     this.log.debug('Triggered SET HeatingThresholdTemperature');
   //   }
 
   /**
    * Handle requests to get the current value of the 'Current Heating Cooling State' characteristic
    */
   private async handleCurrentHeatingCoolingStateGet() {
-    this.platform.log.debug('Triggered GET CurrentHeatingCoolingState');
-    // const status = this.COOLING_STATE_MAP[this.provider.thermostatState?.season?.id || 'OFF'];
-    if (this.provider.getCurrentZoneInfo(this.zoneId)?.atHome) {
-      return this.provider.fullThemostatData?.category === 'heating'
-        ? this.platform.Characteristic.CurrentHeatingCoolingState.HEAT
-        : this.platform.Characteristic.CurrentHeatingCoolingState.COOL;
-    }
-    return this.platform.Characteristic.CurrentHeatingCoolingState.OFF;
+    this.log.debug('Triggered GET CurrentHeatingCoolingState');
+    return this.getCurrentState();
   }
 
   /**
    * Handle requests to get the current value of the 'Target Heating Cooling State' characteristic
    */
   private async handleTargetHeatingCoolingStateGet() {
-    this.platform.log.debug('Triggered GET TargetHeatingCoolingState');
+    this.log.debug('Triggered GET TargetHeatingCoolingState');
     // set this to a valid value for TargetHeatingCoolingState
-    const currentZone = this.provider.getCurrentZoneInfo(this.zoneId);
-    if (currentZone.atHome) {
-      if (currentZone?.mode === ZoneMode.Auto) {
-        return this.platform.Characteristic.TargetHeatingCoolingState.AUTO;
-      } else {
-        return this.provider.fullThemostatData?.category === 'heating'
-          ? this.platform.Characteristic.TargetHeatingCoolingState.HEAT
-          : this.platform.Characteristic.TargetHeatingCoolingState.COOL;
-      }
+
+    const currentZone = this.currentZoneData;
+    if (currentZone?.mode === ZoneMode.Off) {
+      return this.platform.Characteristic.TargetHeatingCoolingState.OFF;
+    } else if ([ZoneMode.Auto, ZoneMode.Holiday, ZoneMode.Party].includes(currentZone?.mode)) {
+      return this.platform.Characteristic.TargetHeatingCoolingState.AUTO;
+    } else if (this.fullData?.category === Category.Heating) {
+      return this.platform.Characteristic.TargetHeatingCoolingState.HEAT;
+    } else {
+      return this.platform.Characteristic.TargetHeatingCoolingState.COOL;
     }
-    return this.platform.Characteristic.TargetHeatingCoolingState.OFF;
   }
 
   /**
    * Handle requests to set the 'Target Heating Cooling State' characteristic
    */
   handleTargetHeatingCoolingStateSet(value: number) {
-    this.platform.log.debug('Triggered SET TargetHeatingCoolingState:', value);
+    this.log.debug('Triggered SET TargetHeatingCoolingState:', value);
   }
 
   /**
    * Handle requests to get the current value of the "Current Temperature" characteristic
    */
   handleCurrentTemperatureGet() {
-    this.platform.log.debug('Triggered GET CurrentTemperature');
+    this.log.debug('Triggered GET CurrentTemperature');
     // set this to a valid value for CurrentTemperature
-    return this.provider.getCurrentZoneInfo(this.zoneId)?.temperature || -99;
+    return this.currentZoneData?.temperature || -99;
   }
 
   /**
    * Handle requests to get the current value of the "Target Temperature" characteristic
    */
   private handleTargetTemperatureGet() {
-    this.platform.log.debug('Triggered GET TargetTemperature');
+    this.log.debug('Triggered GET TargetTemperature');
     // set this to a valid value for TargetTemperature
-    return this.provider.getCurrentZoneInfo(this.zoneId)?.effectiveSetpoint || -99;
+    return this.currentZoneData?.effectiveSetpoint || -99;
   }
 
   /**
    * Handle requests to set the "Target Temperature" characteristic
    */
   private handleTargetTemperatureSet(value: number) {
-    this.platform.log.debug('Triggered SET TargetTemperature:', value);
+    this.log.debug('Triggered SET TargetTemperature:', value);
   }
 
   /**
    * Handle requests to get the current value of the 'Temperature Display Units' characteristic
    */
   private handleTemperatureDisplayUnitsGet() {
-    this.platform.log.debug('Triggered GET TemperatureDisplayUnits');
+    this.log.debug('Triggered GET TemperatureDisplayUnits');
     // set this to a valid value for TemperatureDisplayUnits
     return this.platform.Characteristic.TemperatureDisplayUnits.CELSIUS;
   }
@@ -167,6 +167,18 @@ export class DeltaThermostatPlatformAccessory {
    * Handle requests to set the 'Temperature Display Units' characteristic
    */
   // private handleTemperatureDisplayUnitsSet(value: number) {
-  //   this.platform.log.debug('Triggered SET TemperatureDisplayUnits:', value);
+  //   this.log.debug('Triggered SET TemperatureDisplayUnits:', value);
   // }
+
+  private getCurrentState() {
+    const currentZone = this.currentZoneData;
+    if (currentZone?.mode !== ZoneMode.Off) {
+      if (currentZone?.temperature < currentZone?.effectiveSetpoint) {
+        return this.Characteristic.TargetHeatingCoolingState.HEAT;
+      } else if (currentZone?.temperature > currentZone?.effectiveSetpoint) {
+        return this.Characteristic.TargetHeatingCoolingState.COOL;
+      }
+    }
+    return this.Characteristic.TargetHeatingCoolingState.OFF;
+  }
 }

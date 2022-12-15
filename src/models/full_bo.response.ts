@@ -58,7 +58,7 @@ export interface FullBoResponse {
   unitCode: string;
   measureUnit: string;
   externalTemperature: number;
-  category: 'heating';
+  category: Category;
   season: Season;
   zones: Zone[];
   limits: Limits;
@@ -69,6 +69,10 @@ export interface FullBoResponse {
   setpoints_minutes: string[];
   same_mode_for_all_zones: boolean;
   modal_expiration: boolean;
+}
+
+export enum Category {
+  Heating = 'heating',
 }
 
 export enum SeasonName {
@@ -85,4 +89,6 @@ export enum ZoneMode {
   Auto = 'auto',
   Off = 'off',
   Manual = 'manual',
+  Party = 'party',
+  Holiday = 'holiday',
 }

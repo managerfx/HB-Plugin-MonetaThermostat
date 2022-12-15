@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { API, Logger } from 'homebridge';
 import { addMinutes as addToDate, getRandomInt } from './misc.fuctions';
-import { FullBoResponse } from './models/full_bo.response';
+import { FullBoResponse, Zone } from './models/full_bo.response';
 import { ThermostatPlatformConfig } from './models/thermostat-config';
 
 export class ThermostatProvider {
@@ -64,30 +64,16 @@ export class ThermostatProvider {
       }
     }
     return this.store.data;
-    // return FULL_BO_RESP as FullBoResponse;
   }
 
-  public getCurrentZoneInfo(zoneId: string) {
-    return this.fullThemostatData?.zones.find((zone) => zone.id === zoneId);
+  public getCurrentZoneInfo(zoneId: string): Zone {
+    return this.fullThemostatData()?.zones.find((zone) => zone.id === zoneId);
   }
 
-  public get fullThemostatData(): Partial<FullBoResponse> | undefined {
-    this.getFullState();
+  public fullThemostatData(): Partial<FullBoResponse> | undefined {
+    this.getFullState(); // keep refrashed for next time
     return this.store?.data;
   }
-
-  // private watchThermostatState() {
-  //   const interval = setInterval(() => {
-  //     if (!this.store?.expirationDate || new Date() > this.store.expirationDate || this.store.invalid) {
-  //       this.getFullState().then((resp) => {
-  //         this.log.debug('syncronized');
-  //         this.setStoreAndValidity(resp);
-  //       });
-  //     } else {
-  //       this.log.debug('no syncronized');
-  //     }
-  //   }, 10000);
-  // }
 
   private slowRequestExample<T>(timer: number, outValue: T): Promise<T> {
     return new Promise((resolve) => setTimeout(resolve, timer, outValue));
