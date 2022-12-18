@@ -1,6 +1,6 @@
 import { Service, PlatformAccessory, Characteristic, Logger } from 'homebridge';
 import { CurrentHeatingCoolingState, TargetHeatingCoolingState } from '../models/thermostat-enums';
-import { Category, FullBoResponse, Zone, ZoneMode } from '../models/full_bo.response';
+import { Category, FullBoResponse, SetPointType, Zone, ZoneMode } from '../models/full_bo.response';
 import { ThermostatProvider } from '../thermostat.provider';
 import { DeltaThermostatPlatform } from './deltaPlatform';
 
@@ -79,17 +79,29 @@ export class DeltaThermostatPlatformAccessory {
       .onGet(this.handleTemperatureDisplayUnitsGet.bind(this));
     // .onSet(this.handleTemperatureDisplayUnitsSet.bind(this));
 
-    // this.serviceAccessory
-    //   .getCharacteristic(this.Characteristic.HeatingThresholdTemperature)
-    //   .onGet(this.handleHeatingThresholdTemperatureGet.bind(this));
-    // .onSet(this.handleTemperatureDisplayUnitsSet.bind(this));
+    this.serviceAccessory
+      .getCharacteristic(this.Characteristic.CoolingThresholdTemperature)
+      .onGet(this.handleCoolingThresholdTemperatureGet.bind(this));
+    // .onSet(this.handleHeatingThresholdTemperatureSet.bind(this));
+
+    this.serviceAccessory
+      .getCharacteristic(this.Characteristic.HeatingThresholdTemperature)
+      .onGet(this.handleHeatingThresholdTemperatureGet.bind(this));
+    // .onSet(this.handleHeatingThresholdTemperatureSet.bind(this));
   }
 
-  // private handleHeatingThresholdTemperatureGet() {
-  //   this.log.debug('Triggered GET HeatingThresholdTemperature');
-  //   // const limits = this.fullData?.manual_limits;
-  //   return 18;
-  // }
+  private handleCoolingThresholdTemperatureGet() {
+    this.log.debug('Triggered GET HeatingThresholdTemperature');
+    const minTemp = this.currentZoneData?.setpoints.find((setpoint) => setpoint.type === SetPointType.Absent);
+    return minTemp?.temperature;
+    // const limits = this.fullData?.manual_limits;
+  }
+
+  private handleHeatingThresholdTemperatureGet() {
+    this.log.debug('Triggered GET HeatingThresholdTemperature');
+    const minTemp = this.currentZoneData?.setpoints.find((setpoint) => setpoint.type === SetPointType.Present);
+    return minTemp?.temperature;
+  }
 
   //   private handleHeatingThresholdTemperatureSet(value) {
   //     this.log.debug('Triggered SET HeatingThresholdTemperature');
@@ -173,13 +185,20 @@ export class DeltaThermostatPlatformAccessory {
 
   private getCurrentState() {
     const currentZone = this.currentZoneData;
-    if (currentZone?.mode !== ZoneMode.Off) {
+    if (currentZone?.mode === ZoneMode.Off) {
+      return CurrentHeatingCoolingState.OFF;
+    }
+
+    if (this.fullData?.category === Category.Heating) {
       if (currentZone?.temperature < currentZone?.effectiveSetpoint) {
         return CurrentHeatingCoolingState.HEAT;
-      } else if (currentZone?.temperature > currentZone?.effectiveSetpoint) {
+      }
+      return CurrentHeatingCoolingState.OFF;
+    } else {
+      if (currentZone?.temperature > currentZone?.effectiveSetpoint) {
         return CurrentHeatingCoolingState.COOL;
       }
+      return CurrentHeatingCoolingState.OFF;
     }
-    return CurrentHeatingCoolingState.OFF;
   }
 }
