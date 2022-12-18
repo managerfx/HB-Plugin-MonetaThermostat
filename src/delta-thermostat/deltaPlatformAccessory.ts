@@ -81,25 +81,35 @@ export class DeltaThermostatPlatformAccessory {
 
     this.serviceAccessory
       .getCharacteristic(this.Characteristic.CoolingThresholdTemperature)
+      .setProps({
+        maxValue: this.fullData.limits.present_max_temp,
+        minValue: this.fullData.limits.present_min_temp,
+        minStep: this.fullData.limits.step_value,
+      })
       .onGet(this.handleCoolingThresholdTemperatureGet.bind(this));
     // .onSet(this.handleHeatingThresholdTemperatureSet.bind(this));
 
     this.serviceAccessory
       .getCharacteristic(this.Characteristic.HeatingThresholdTemperature)
+      .setProps({
+        maxValue: this.fullData.limits.present_max_temp,
+        minValue: this.fullData.limits.present_min_temp,
+        minStep: this.fullData.limits.step_value,
+      })
       .onGet(this.handleHeatingThresholdTemperatureGet.bind(this));
     // .onSet(this.handleHeatingThresholdTemperatureSet.bind(this));
   }
 
   private handleCoolingThresholdTemperatureGet() {
     this.log.debug('Triggered GET HeatingThresholdTemperature');
-    const minTemp = this.currentZoneData?.setpoints.find((setpoint) => setpoint.type === SetPointType.Absent);
+    const minTemp = this.currentZoneData?.setpoints.find((setpoint) => setpoint.type === SetPointType.Present);
     return minTemp?.temperature;
     // const limits = this.fullData?.manual_limits;
   }
 
   private handleHeatingThresholdTemperatureGet() {
     this.log.debug('Triggered GET HeatingThresholdTemperature');
-    const minTemp = this.currentZoneData?.setpoints.find((setpoint) => setpoint.type === SetPointType.Present);
+    const minTemp = this.currentZoneData?.setpoints.find((setpoint) => setpoint.type === SetPointType.Absent);
     return minTemp?.temperature;
   }
 
