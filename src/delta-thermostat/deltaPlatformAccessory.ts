@@ -1,4 +1,5 @@
 import { Service, PlatformAccessory, Characteristic, Logger } from 'homebridge';
+import { CurrentHeatingCoolingState, TargetHeatingCoolingState } from '../models/thermostat-enums';
 import { Category, FullBoResponse, Zone, ZoneMode } from '../models/full_bo.response';
 import { ThermostatProvider } from '../thermostat.provider';
 import { DeltaThermostatPlatform } from './deltaPlatform';
@@ -62,7 +63,6 @@ export class DeltaThermostatPlatformAccessory {
     this.serviceAccessory
       .getCharacteristic(this.Characteristic.CurrentTemperature)
       .onGet(this.handleCurrentTemperatureGet.bind(this));
-    this.Characteristic.TargetTemperature;
 
     this.serviceAccessory
       .getCharacteristic(this.Characteristic.TargetTemperature)
@@ -79,17 +79,17 @@ export class DeltaThermostatPlatformAccessory {
       .onGet(this.handleTemperatureDisplayUnitsGet.bind(this));
     // .onSet(this.handleTemperatureDisplayUnitsSet.bind(this));
 
-    this.serviceAccessory
-      .getCharacteristic(this.Characteristic.HeatingThresholdTemperature)
-      .onGet(this.handleHeatingThresholdTemperatureGet.bind(this));
+    // this.serviceAccessory
+    //   .getCharacteristic(this.Characteristic.HeatingThresholdTemperature)
+    //   .onGet(this.handleHeatingThresholdTemperatureGet.bind(this));
     // .onSet(this.handleTemperatureDisplayUnitsSet.bind(this));
   }
 
-  private handleHeatingThresholdTemperatureGet() {
-    this.log.debug('Triggered GET HeatingThresholdTemperature');
-    // const limits = this.fullData?.manual_limits;
-    return 18;
-  }
+  // private handleHeatingThresholdTemperatureGet() {
+  //   this.log.debug('Triggered GET HeatingThresholdTemperature');
+  //   // const limits = this.fullData?.manual_limits;
+  //   return 18;
+  // }
 
   //   private handleHeatingThresholdTemperatureSet(value) {
   //     this.log.debug('Triggered SET HeatingThresholdTemperature');
@@ -112,20 +112,20 @@ export class DeltaThermostatPlatformAccessory {
 
     const currentZone = this.currentZoneData;
     if (currentZone?.mode === ZoneMode.Off) {
-      return this.platform.Characteristic.TargetHeatingCoolingState.OFF;
+      return TargetHeatingCoolingState.OFF;
     } else if ([ZoneMode.Auto, ZoneMode.Holiday, ZoneMode.Party].includes(currentZone?.mode)) {
-      return this.platform.Characteristic.TargetHeatingCoolingState.AUTO;
+      return TargetHeatingCoolingState.AUTO;
     } else if (this.fullData?.category === Category.Heating) {
-      return this.platform.Characteristic.TargetHeatingCoolingState.HEAT;
+      return TargetHeatingCoolingState.HEAT;
     } else {
-      return this.platform.Characteristic.TargetHeatingCoolingState.COOL;
+      return TargetHeatingCoolingState.COOL;
     }
   }
 
   /**
    * Handle requests to set the 'Target Heating Cooling State' characteristic
    */
-  handleTargetHeatingCoolingStateSet(value: number) {
+  handleTargetHeatingCoolingStateSet(value: TargetHeatingCoolingState) {
     this.log.debug('Triggered SET TargetHeatingCoolingState:', value);
   }
 
@@ -152,6 +152,7 @@ export class DeltaThermostatPlatformAccessory {
    */
   private handleTargetTemperatureSet(value: number) {
     this.log.debug('Triggered SET TargetTemperature:', value);
+    this.provider.setTargetTemperature(this.zoneId, value);
   }
 
   /**
@@ -174,11 +175,11 @@ export class DeltaThermostatPlatformAccessory {
     const currentZone = this.currentZoneData;
     if (currentZone?.mode !== ZoneMode.Off) {
       if (currentZone?.temperature < currentZone?.effectiveSetpoint) {
-        return this.Characteristic.TargetHeatingCoolingState.HEAT;
+        return CurrentHeatingCoolingState.HEAT;
       } else if (currentZone?.temperature > currentZone?.effectiveSetpoint) {
-        return this.Characteristic.TargetHeatingCoolingState.COOL;
+        return CurrentHeatingCoolingState.COOL;
       }
     }
-    return this.Characteristic.TargetHeatingCoolingState.OFF;
+    return CurrentHeatingCoolingState.OFF;
   }
 }

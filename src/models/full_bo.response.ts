@@ -83,12 +83,13 @@ export enum SeasonName {
 export enum SetPointType {
   Absent = 'absent',
   Present = 'present',
+  Manual = 'effective', //Manual
 }
 
 export enum ZoneMode {
   Auto = 'auto',
   Off = 'off',
-  Manual = 'manual',
+  Manual = 'manual', //Permanente
   Party = 'party',
   Holiday = 'holiday',
 }
