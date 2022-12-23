@@ -57,7 +57,7 @@ export class DeltaThermostatPlatform implements DynamicPlatformPlugin {
    * must not be registered again to prevent "duplicate UUID" errors.
    */
   async discoverDevices() {
-    const response = await this.provider.getFullState();
+    const response = await this.provider.getState();
     if (!response?.zones) {
       this.log.warn('No zones founded');
       return;

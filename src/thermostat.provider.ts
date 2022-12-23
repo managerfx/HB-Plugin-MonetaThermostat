@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { API, Logger } from 'homebridge';
 import { runInThisContext } from 'vm';
-import { addMinutes as addToDate, getRandomInt } from './misc.fuctions';
+import { addMinutes as addToDate, filterStateByZoneId, getRandomInt } from './misc.fuctions';
 import { FullBoResponse, Zone, ZoneMode } from './models/full_bo.response';
 import { ThermostatPlatformConfig } from './models/thermostat-config';
 import { TargetHeatingCoolingState } from './models/thermostat-enums';
@@ -38,8 +38,12 @@ export class ThermostatProvider {
     public readonly api?: API
   ) {}
 
-  public async getFullState(refrash = false): Promise<Partial<FullBoResponse> | null> {
-    if (!this.store.pending && (!this.store?.expirationDate || new Date() > this.store.expirationDate || refrash)) {
+  public get currentStateValue(): Partial<FullBoResponse> {
+    return this.store?.data;
+  }
+
+  public async getState(reload = false): Promise<Partial<FullBoResponse> | null> {
+    if (!this.store.pending && (!this.store?.expirationDate || new Date() > this.store.expirationDate || reload)) {
       try {
         this.store = { ...this.store, pending: true };
         this.log.info(`${this.istanceName} calling full_bo`);
@@ -53,7 +57,7 @@ export class ThermostatProvider {
             data: response.data,
             pending: false,
           };
-          this.log.error(`${this.istanceName} full_bo loaded`, this.store.expirationDate);
+          this.log.info(`${this.istanceName} full_bo loaded		`, this.store.expirationDate);
           return response.data;
         }
       } catch (error) {
@@ -64,42 +68,38 @@ export class ThermostatProvider {
     return this.store.data;
   }
 
-  public getCurrentZoneInfo(zoneId: string): Zone {
-    return this.fullThemostatData()?.zones.find((zone) => zone.id === zoneId);
-  }
-
-  public fullThemostatData(): Partial<FullBoResponse> | undefined {
-    this.getFullState(); // keep refrashed for next time
-    return this.store?.data;
+  public async getZoneById(zoneId: string): Promise<Zone> {
+    return this.getState().then(filterStateByZoneId(zoneId));
   }
 
   public async setTargetTemperature(zoneId: string, temperature: number): Promise<any> {
-    const currentZone = this.getCurrentZoneInfo(zoneId);
-    const requests = {
-      request_type: 'post_bo_setpoint',
-      unitCode: this.store?.data?.unitCode,
-      category: this.store?.data?.category,
-      zones: [
-        {
-          id: zoneId,
-          mode: currentZone.mode,
-          currentManualTemperature: temperature,
-          ...(currentZone.mode === ZoneMode.Auto && {
-            setpoints: [
-              {
-                type: 'present',
-                temperature: temperature,
-              },
-            ],
-          }),
-        },
-      ],
-    };
+    return;
+    // const currentZone = this.getCurrentZoneInfo(zoneId);
+    // const requests = {
+    //   request_type: 'post_bo_setpoint',
+    //   unitCode: this.store?.data?.unitCode,
+    //   category: this.store?.data?.category,
+    //   zones: [
+    //     {
+    //       id: zoneId,
+    //       mode: currentZone.mode,
+    //       currentManualTemperature: temperature,
+    //       ...(currentZone.mode === ZoneMode.Auto && {
+    //         setpoints: [
+    //           {
+    //             type: 'present',
+    //             temperature: temperature,
+    //           },
+    //         ],
+    //       }),
+    //     },
+    //   ],
+    // };
 
-    return this.apiIstance.post<FullBoResponse>('sensors_data_request', requests).then(({ data }) => {
-      this.getFullState(true);
-      this.log.info('setTargetTemperature', data);
-    });
+    // return this.apiIstance.post<FullBoResponse>('sensors_data_request', requests).then(({ data }) => {
+    //   this.getFullState(true);
+    //   this.log.info('setTargetTemperature', data);
+    // });
   }
 
   public async setTargetState(state: TargetHeatingCoolingState): Promise<any> {
@@ -119,7 +119,7 @@ export class ThermostatProvider {
     };
 
     return this.apiIstance.post<FullBoResponse>('sensors_data_request', requests).then(({ data }) => {
-      this.getFullState(true);
+      this.getState(true);
       this.log.info('setTargetState', data);
     });
   }
