@@ -5,6 +5,7 @@ import { ThermostatProvider } from '../thermostat.provider';
 import { DeltaThermostatPlatform } from './deltaPlatform';
 import { ProcessEnvOptions } from 'child_process';
 import { filterStateByZoneId } from '../misc.fuctions';
+import { of } from 'rxjs';
 
 /**
  * Platform Accessory

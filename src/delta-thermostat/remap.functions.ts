@@ -1,13 +1,5 @@
-import { stat } from 'fs';
 import { ZoneMode } from '../models/full_bo.response';
 import { TargetHeatingCoolingState } from '../models/thermostat-enums';
-
-const STATUS_MAP = {
-  [TargetHeatingCoolingState.AUTO]: ZoneMode.Auto,
-  [TargetHeatingCoolingState.HEAT]: ZoneMode.Manual,
-  [TargetHeatingCoolingState.COOL]: ZoneMode.Manual,
-  [TargetHeatingCoolingState.OFF]: ZoneMode.Off,
-};
 
 function isTargetHeatingCoolingState(state: unknown): state is TargetHeatingCoolingState {
   return typeof state === 'number' && Object.values(TargetHeatingCoolingState).includes(state);

@@ -1,21 +1,17 @@
 import axios from 'axios';
 import { API, Logger } from 'homebridge';
-import { runInThisContext } from 'vm';
 import { addMinutes as addToDate, filterStateByZoneId, getRandomInt } from './misc.fuctions';
 import { FullBoResponse, Zone, ZoneMode } from './models/full_bo.response';
 import { ThermostatPlatformConfig } from './models/thermostat-config';
 import { TargetHeatingCoolingState } from './models/thermostat-enums';
 
+export type ThermostaState = {
+  expirationDate: Date | null;
+  data: Partial<FullBoResponse> | null;
+  pending: boolean;
+};
 export class ThermostatProvider {
-  // private readonly Service: typeof Service = this.api.hap.Service;
-  // private readonly Characteristic: typeof Characteristic =
-  //   this.api.hap.Characteristic;
-
-  private store: {
-    expirationDate: Date | null;
-    data: Partial<FullBoResponse> | null;
-    pending: boolean;
-  } = {
+  private store: ThermostaState = {
     expirationDate: null,
     data: null,
     pending: false,
@@ -57,7 +53,7 @@ export class ThermostatProvider {
             data: response.data,
             pending: false,
           };
-          this.log.info(`${this.istanceName} full_bo loaded		`, this.store.expirationDate);
+          this.log.info(`${this.istanceName} full_bo loaded`, this.store.expirationDate);
           return response.data;
         }
       } catch (error) {
