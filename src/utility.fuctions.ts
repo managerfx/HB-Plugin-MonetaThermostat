@@ -1,11 +1,10 @@
 import { ThermostatModel, Zone } from './models/thermostat.model';
-
-export function addMinutes(date: Date, timeToAdd: number, type: 'm' | 's'): Date {
-  const MULT_MAP = {
-    s: 1000,
-    m: 60000,
-  };
-  return new Date(date.getTime() + timeToAdd * MULT_MAP[type]);
+const ADD_TIME_MULTIPLIER_MAP = {
+  s: 1000,
+  m: 60000,
+};
+export function addTime(date: Date, timeToAdd: number, type: 'm' | 's'): Date {
+  return new Date(date.getTime() + timeToAdd * ADD_TIME_MULTIPLIER_MAP[type]);
 }
 
 export function getRandomInt(max: number): number {

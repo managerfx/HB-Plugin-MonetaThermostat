@@ -1,6 +1,6 @@
 import { Service, PlatformAccessory } from 'homebridge';
 import { Category, SetPointType, ZoneMode } from '../models/thermostat.model';
-import { ThermostatProvider } from '../thermostat.api-provider';
+import { ThermostatProvider } from '../api/thermostat.api-provider';
 import { DeltaThermostatPlatform } from './delta.platform';
 import { filterStateByZoneId } from '../utility.fuctions';
 import { BaseThermostatAccessory } from '../models/delta-thermostat-accessory-base-class';

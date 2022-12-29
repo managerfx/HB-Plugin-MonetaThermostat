@@ -1,15 +1,17 @@
 import axios from 'axios';
 import { API, Logger } from 'homebridge';
-import { addMinutes as addToDate, filterStateByZoneId, getRandomInt, Subset } from './utility.fuctions';
-import { ThermostatModel, RequestType, Zone, ZoneMode, SetPointType } from './models/thermostat.model';
-import { ThermostatPlatformConfig } from './models/thermostat.config';
-import { TargetHeatingCoolingState } from './delta-thermostat/delta-thermostat.accessory';
+import { addTime as addToDate, filterStateByZoneId, getRandomInt, Subset } from '../utility.fuctions';
+import { ThermostatModel, RequestType, Zone, ZoneMode, SetPointType } from '../models/thermostat.model';
+import { ThermostatPlatformConfig } from '../models/thermostat.config';
+import { TargetHeatingCoolingState } from '../delta-thermostat/delta-thermostat.accessory';
+import { performance } from 'perf_hooks';
 
 export type ThermostaState = {
   expirationDate: Date | null;
   data: Partial<ThermostatModel> | null;
   pending: boolean;
 };
+
 export class ThermostatProvider {
   private store: ThermostaState = {
     expirationDate: null,
@@ -26,7 +28,8 @@ export class ThermostatProvider {
     [TargetHeatingCoolingState.OFF]: this.setOffTargetState.bind(this),
   };
 
-  private istanceName = getRandomInt(999999).toString();
+  readonly DEFAULT_ZONE_ID = '1';
+
   private apiIstance = axios.create({
     method: 'POST',
     baseURL: 'https://portal.planetsmartcity.com/api/v3/',
@@ -52,29 +55,49 @@ export class ThermostatProvider {
       ...this.store,
       expirationDate: new Date(),
     };
-    this.log.debug('full_bo cached is invalidated');
+    this.log.debug('Cache invalidated');
+  }
+
+  private async thermostatApi(requestType: RequestType, request?: Subset<ThermostatModel>): Promise<ThermostatModel> {
+    const composedRequest = {
+      ...request,
+      request_type: requestType,
+    };
+    this.log.debug('Thermostat API - REQUEST:', composedRequest);
+    return this.apiIstance
+      .post<ThermostatModel>('sensors_data_request', composedRequest)
+      .then((response) => {
+        this.log.debug(`Thermostat API - RESPONSE: STATUS ${response?.status}`, response?.data);
+
+        requestType !== RequestType.Full && this.setCacheInvalid();
+        return response?.data;
+      })
+      .catch((err) => {
+        this.log.error('Error calling thermostat API', err);
+        throw new Error(err);
+      });
   }
 
   public async getState(): Promise<Partial<ThermostatModel> | null> {
     if (!this.store.pending && (!this.store?.expirationDate || new Date() > this.store.expirationDate)) {
       try {
+        const timeStart = Date.now();
+        this.log.info('Fetching thermostat State...');
         this.store = { ...this.store, pending: true };
-        this.log.info(`${this.istanceName} calling full_bo`);
-        const response = await this.apiIstance.post<ThermostatModel>('sensors_data_request', {
-          request_type: RequestType.Full,
-        });
-        // const response = await this.slowRequestExample(3000, { data: FULL_BO_RESP });
-        if (response?.data) {
+        const response = await this.thermostatApi(RequestType.Full);
+        if (response) {
           this.store = {
-            expirationDate: addToDate(new Date(), 1, 'm'),
-            data: response.data,
+            expirationDate: addToDate(new Date(), this.config?.thermostatPollingInterval || 1, 'm'),
+            data: response,
             pending: false,
           };
-          this.log.info(`${this.istanceName} full_bo loaded`, this.store.expirationDate);
-          return response.data;
+          this.log.info(
+            `Thermostat State fatched in ${Date.now() - timeStart} ms. Response is now cached until`,
+            this.store.expirationDate.toLocaleTimeString()
+          );
+          return response;
         }
       } catch (error) {
-        this.log.error(`${this.istanceName} error in full_bo`, error);
         this.store = { ...this.store, pending: false };
       }
     }
@@ -116,19 +139,16 @@ export class ThermostatProvider {
   // }
 
   public async setTargetState(state: TargetHeatingCoolingState): Promise<boolean> {
-    return this.TARGET_STATE_MAP[state]().then((response) => {
-      return !!response;
-    });
+    return this.TARGET_STATE_MAP[state]().then((response) => !!response);
   }
 
   private async setOffTargetState(): Promise<unknown> {
     const request: Subset<ThermostatModel> = {
-      request_type: RequestType.Setpoint,
       unitCode: this.store?.data?.unitCode,
       category: this.store?.data?.category,
       zones: [
         {
-          id: '1',
+          id: this.DEFAULT_ZONE_ID,
           mode: ZoneMode.Off,
           expiration: 0,
           setpoints: [
@@ -140,13 +160,8 @@ export class ThermostatProvider {
         },
       ],
     };
-    this.log.info('setOffTargetState request', request);
-    return this.apiIstance.post<ThermostatModel>('sensors_data_request', request).then((response) => {
-      this.setCacheInvalid();
-      this.log.info('setOffTargetState response', response?.data);
-
-      return response?.data;
-    });
+    this.log.info('setOffTargetState');
+    return this.thermostatApi(RequestType.Setpoint, request);
   }
 
   private async setAutoTargetState(): Promise<unknown> {
@@ -156,19 +171,13 @@ export class ThermostatProvider {
       category: this.store?.data?.category,
       zones: [
         {
-          id: '1',
+          id: this.DEFAULT_ZONE_ID,
           mode: ZoneMode.Auto,
           expiration: 0,
         },
       ],
     };
-    this.log.info('setAutoTargetState request', request);
-    return this.apiIstance.post<ThermostatModel>('sensors_data_request', request).then((response) => {
-      this.setCacheInvalid();
-      this.log.info('setAutoTargetState response', response?.data);
-
-      return response?.data;
-    });
+    return this.thermostatApi(RequestType.Setpoint, request);
   }
 
   private slowRequestExample<T>(timer: number, outValue: T): Promise<T> {
@@ -204,17 +213,12 @@ export class ThermostatProvider {
         },
       ],
     };
-    this.log.info('setPresentAbsentTemperatureByZoneId request', request);
-    return this.apiIstance.post<ThermostatModel>('sensors_data_request', request).then((response) => {
-      this.setCacheInvalid();
-      this.log.info('setPresentAbsentTemperatureByZoneId response', response?.data);
-
-      return response?.data;
-    });
+    this.log.info('setPresentAbsentTemperatureByZoneId');
+    return this.thermostatApi(RequestType.Setpoint, request);
   }
 
   public async getThermostatPresence(): Promise<boolean> {
-    return this.getZoneById('1').then((zone) => zone.atHome);
+    return this.getZoneById(this.DEFAULT_ZONE_ID).then((zone) => zone.atHome);
   }
 }
 

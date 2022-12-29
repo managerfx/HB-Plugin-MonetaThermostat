@@ -1,5 +1,5 @@
 import { PlatformAccessory } from 'homebridge';
-import { ThermostatProvider } from '../thermostat.api-provider';
+import { ThermostatProvider } from '../api/thermostat.api-provider';
 import { DeltaThermostatPlatform } from './delta.platform';
 import { BaseThermostatAccessory } from '../models/delta-thermostat-accessory-base-class';
 

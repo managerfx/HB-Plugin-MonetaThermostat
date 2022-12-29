@@ -25,7 +25,13 @@
           "title": "Accessory name",
           "type": "string"
         }
+      },
+      "thermostatPollingInterval": {
+        "title": "Polling Interval API (Minutes)",
+        "type": "number",
+        "required": false
       }
+
     }
   }
 }

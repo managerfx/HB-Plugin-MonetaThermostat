@@ -1,6 +1,6 @@
 import { PlatformAccessory, Service } from 'homebridge';
 import { DeltaThermostatPlatform } from '../delta-thermostat/delta.platform';
-import { ThermostatProvider } from '../thermostat.api-provider';
+import { ThermostatProvider } from '../api/thermostat.api-provider';
 
 export class BaseThermostatAccessory {
   protected serviceAccessory: Service;
