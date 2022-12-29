@@ -21,8 +21,8 @@ export enum TargetHeatingCoolingState {
 export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
   CHARACTERISTIC_HANDLER_CONFIG: CharacteristicHandlerMapItem[] = [
     {
-      characteristic: this.Characteristic.TargetTemperature,
-      getCallbackFn: this.handleTargetTemperatureGet,
+      characteristic: this.Characteristic.CurrentHeatingCoolingState,
+      getCallbackFn: this.handleCurrentHeatingCoolingStateGet,
     },
     {
       characteristic: this.Characteristic.TargetHeatingCoolingState,
