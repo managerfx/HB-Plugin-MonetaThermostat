@@ -3,7 +3,7 @@ import { Category, RequestType, SetPointType, ZoneMode } from '../models/thermos
 import { ThermostatProvider } from '../api/thermostat.api-provider';
 import { DeltaThermostatPlatform } from './delta.platform';
 import { filterStateByZoneId } from '../utility.fuctions';
-import { BaseThermostatAccessory } from '../models/delta-thermostat-accessory-base-class';
+import { BaseThermostatAccessory, CharacteristicHandlerMapItem } from '../models/delta-thermostat-accessory-base-class';
 
 export enum CurrentHeatingCoolingState {
   OFF,
@@ -19,10 +19,10 @@ export enum TargetHeatingCoolingState {
 }
 
 export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
-  CHARACTERISTIC_HANDLER_CONFIG = [
+  CHARACTERISTIC_HANDLER_CONFIG: CharacteristicHandlerMapItem[] = [
     {
       characteristic: this.Characteristic.TargetTemperature,
-      getCallbackFn: this.handleCurrentHeatingCoolingStateGet,
+      getCallbackFn: this.handleTargetTemperatureGet,
     },
     {
       characteristic: this.Characteristic.TargetHeatingCoolingState,
@@ -85,13 +85,15 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
     this.provider.thermostatEmitter.on(RequestType.Full, () => {
       this.log.warn('nuovo dato scateno tutti i getter!!!');
 
-      this.CHARACTERISTIC_HANDLER_CONFIG.forEach(async (current) => {
-        const characteristic = this.serviceAccessory.getCharacteristic(current.characteristic);
+      for (const current of this.CHARACTERISTIC_HANDLER_CONFIG) {
         if (current.getCallbackFn) {
-          const result = await current.getCallbackFn.bind(this)();
+          const characteristic = this.serviceAccessory.getCharacteristic(current.characteristic);
+          const result = current.getCallbackFn.bind(this)();
+
+          this.log.info(`updating ${current.characteristic.name} with value:`, result);
           characteristic.updateValue(result);
         }
-      });
+      }
     });
   }
 

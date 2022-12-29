@@ -72,7 +72,7 @@ export type CharacteristicHandlerMapItem = {
   characteristic: WithUUID<{
     new (): Characteristic;
   }>;
-  getCallbackFn: () => string | number | Promise<string> | Promise<number>;
+  getCallbackFn: () => string | number;
   setCallbackFn?: (args: unknown) => void;
   props?: PartialAllowingNull<CharacteristicProps>;
 };
