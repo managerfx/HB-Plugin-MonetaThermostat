@@ -35,10 +35,8 @@ export class DeltaPresencePlatformAccessory extends BaseThermostatAccessory {
 
   private async handleOccupancyDetectedGet(): Promise<OccupancyDetected> {
     this.log.debug('Triggered GET CurrentTemperature');
-    return this.provider
-      .getThermostatPresence()
-      .then((isPresent) =>
-        isPresent ? OccupancyDetected.OCCUPANCY_DETECTED : OccupancyDetected.OCCUPANCY_NOT_DETECTED
-      );
+    return this.provider.getThermostatPresence()
+      ? OccupancyDetected.OCCUPANCY_DETECTED
+      : OccupancyDetected.OCCUPANCY_NOT_DETECTED;
   }
 }

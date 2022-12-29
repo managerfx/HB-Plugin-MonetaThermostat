@@ -1,13 +1,7 @@
-import { Service, PlatformAccessory } from 'homebridge';
+import { PlatformAccessory } from 'homebridge';
 import { ThermostatProvider } from '../api/thermostat.api-provider';
 import { DeltaThermostatPlatform } from './delta.platform';
-import { filterStateByZoneId } from '../utility.fuctions';
 import { BaseThermostatAccessory } from '../models/delta-thermostat-accessory-base-class';
-
-enum OccupancyDetected {
-  OCCUPANCY_NOT_DETECTED,
-  OCCUPANCY_DETECTED,
-}
 
 export class DeltaTemperatureSensorAccessory extends BaseThermostatAccessory {
   constructor(
@@ -34,8 +28,8 @@ export class DeltaTemperatureSensorAccessory extends BaseThermostatAccessory {
       .onGet(this.handleCurrentTemperatureGet.bind(this));
   }
 
-  private async handleCurrentTemperatureGet(): Promise<number> {
+  private handleCurrentTemperatureGet(): number {
     this.log.debug('Triggered GET OccupancyDetected');
-    return this.provider.getState().then((state) => state.externalTemperature);
+    return this.provider.getCurrentState().externalTemperature;
   }
 }

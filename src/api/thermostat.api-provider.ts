@@ -1,10 +1,10 @@
 import axios from 'axios';
 import { API, Logger } from 'homebridge';
-import { addTime as addToDate, filterStateByZoneId, getRandomInt, Subset } from '../utility.fuctions';
+import { addTime as addToDate, filterStateByZoneId, Subset } from '../utility.fuctions';
 import { ThermostatModel, RequestType, Zone, ZoneMode, SetPointType } from '../models/thermostat.model';
 import { ThermostatPlatformConfig } from '../models/thermostat.config';
 import { TargetHeatingCoolingState } from '../delta-thermostat/delta-thermostat.accessory';
-import { performance } from 'perf_hooks';
+import EventEmitter from 'events';
 
 export type ThermostaState = {
   expirationDate: Date | null;
@@ -29,6 +29,7 @@ export class ThermostatProvider {
   };
 
   readonly DEFAULT_ZONE_ID = '1';
+  readonly thermostatEmitter = new EventEmitter();
 
   private apiIstance = axios.create({
     method: 'POST',
@@ -46,7 +47,7 @@ export class ThermostatProvider {
     public readonly api?: API
   ) {}
 
-  public get cachedValue(): Partial<ThermostatModel> {
+  private get cachedValue(): Partial<ThermostatModel> {
     return this.store?.data;
   }
 
@@ -95,6 +96,8 @@ export class ThermostatProvider {
             `Thermostat State fatched in ${Date.now() - timeStart} ms. Response is now cached until`,
             this.store.expirationDate.toLocaleTimeString()
           );
+          this.thermostatEmitter.emit(RequestType.Full);
+
           return response;
         }
       } catch (error) {
@@ -104,8 +107,13 @@ export class ThermostatProvider {
     return this.store.data;
   }
 
-  public async getZoneById(zoneId: string): Promise<Zone> {
-    return this.getState().then(filterStateByZoneId(zoneId));
+  getCurrentState(): Partial<ThermostatModel> | null {
+    this.getState(); //trigger update
+    return this.cachedValue;
+  }
+
+  public getZoneById(zoneId: string): Zone {
+    return filterStateByZoneId(zoneId)(this.getCurrentState());
   }
 
   // public async setTargetTemperature(zoneId: string, temperature: number): Promise<unknown> {
@@ -217,8 +225,8 @@ export class ThermostatProvider {
     return this.thermostatApi(RequestType.Setpoint, request);
   }
 
-  public async getThermostatPresence(): Promise<boolean> {
-    return this.getZoneById(this.DEFAULT_ZONE_ID).then((zone) => zone.atHome);
+  public getThermostatPresence(): boolean {
+    return this.getZoneById(this.DEFAULT_ZONE_ID).atHome;
   }
 }
 

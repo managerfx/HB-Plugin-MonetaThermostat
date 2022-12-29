@@ -14,6 +14,7 @@ import { ThermostatPlatformConfig } from '../models/thermostat.config';
 import { DeltaPresencePlatformAccessory } from './delta-presence.accessory';
 import { BaseThermostatAccessory } from '../models/delta-thermostat-accessory-base-class';
 import { DeltaTemperatureSensorAccessory } from './delta-temperature-sensor.accessory';
+import { EventEmitter } from 'stream';
 
 /**
  * HomebridgePlatform
