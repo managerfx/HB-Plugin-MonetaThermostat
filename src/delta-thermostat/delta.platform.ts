@@ -1,12 +1,4 @@
-import {
-  API,
-  DynamicPlatformPlugin,
-  Logger,
-  PlatformAccessory,
-  PlatformConfig,
-  Service,
-  Characteristic,
-} from 'homebridge';
+import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, Service, Characteristic } from 'homebridge';
 import { DELTA_PLATFORM_NAME, PLUGIN_NAME } from '../settings';
 import { DeltaThermostatPlatformAccessory } from './delta-thermostat.accessory';
 import { ThermostatProvider } from '../api/thermostat.api-provider';
@@ -14,7 +6,6 @@ import { ThermostatPlatformConfig } from '../models/thermostat.config';
 import { DeltaPresencePlatformAccessory } from './delta-presence.accessory';
 import { BaseThermostatAccessory } from '../models/delta-thermostat-accessory-base-class';
 import { DeltaTemperatureSensorAccessory } from './delta-temperature-sensor.accessory';
-import { EventEmitter } from 'stream';
 
 /**
  * HomebridgePlatform
