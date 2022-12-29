@@ -1,4 +1,4 @@
-import { FullBoResponse } from './full_bo.response';
+import { ThermostatModel } from './thermostat.model';
 
 export const FULL_BO_RESP = {
   provider: 'A2A',
@@ -205,4 +205,4 @@ export const FULL_BO_RESP = {
   setpoints_minutes: ['00', '30'],
   same_mode_for_all_zones: true,
   modal_expiration: false,
-} as FullBoResponse;
+} as ThermostatModel;

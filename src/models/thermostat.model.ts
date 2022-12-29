@@ -53,7 +53,8 @@ export interface ManualLimits {
   step_value: number;
 }
 
-export interface FullBoResponse {
+export interface ThermostatModel {
+  request_type?: RequestType;
   provider: string;
   unitCode: string;
   measureUnit: string;
@@ -71,6 +72,11 @@ export interface FullBoResponse {
   modal_expiration: boolean;
 }
 
+export enum RequestType {
+  Full = 'full_bo',
+  Setpoint = 'post_bo_setpoint',
+}
+
 export enum Category {
   Heating = 'heating',
 }
@@ -83,7 +89,7 @@ export enum SeasonName {
 export enum SetPointType {
   Absent = 'absent',
   Present = 'present',
-  Manual = 'effective', //Manual
+  Effective = 'effective', //Manual
 }
 
 export enum ZoneMode {

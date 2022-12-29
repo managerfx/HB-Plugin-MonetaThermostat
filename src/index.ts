@@ -1,6 +1,6 @@
 import { API } from 'homebridge';
 import { DELTA_PLATFORM_NAME } from './settings';
-import { DeltaThermostatPlatform } from './delta-thermostat/deltaPlatform';
+import { DeltaThermostatPlatform } from './delta-thermostat/delta.platform';
 
 /**
  * This method registers the platform with Homebridge

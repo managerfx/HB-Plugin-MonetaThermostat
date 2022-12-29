@@ -1,43 +1,36 @@
-import { Service, PlatformAccessory, Characteristic, Logger } from 'homebridge';
-import { CurrentHeatingCoolingState, TargetHeatingCoolingState } from '../models/thermostat-enums';
-import { Category, FullBoResponse, SetPointType, Zone, ZoneMode } from '../models/full_bo.response';
-import { ThermostatProvider } from '../thermostat.provider';
-import { DeltaThermostatPlatform } from './deltaPlatform';
-import { ProcessEnvOptions } from 'child_process';
-import { filterStateByZoneId } from '../misc.fuctions';
-import { of } from 'rxjs';
+import { Service, PlatformAccessory } from 'homebridge';
+import { Category, SetPointType, ZoneMode } from '../models/thermostat.model';
+import { ThermostatProvider } from '../thermostat.api-provider';
+import { DeltaThermostatPlatform } from './delta.platform';
+import { filterStateByZoneId } from '../utility.fuctions';
+import { BaseThermostatAccessory } from '../models/delta-thermostat-accessory-base-class';
+
+export enum CurrentHeatingCoolingState {
+  OFF,
+  HEAT,
+  COOL,
+}
+
+export enum TargetHeatingCoolingState {
+  OFF,
+  HEAT,
+  COOL,
+  AUTO,
+}
 
 /**
  * Platform Accessory
  * An instance of this class is created for each accessory your platform registers
  * Each accessory may expose multiple services of different service types.
  */
-export class DeltaThermostatPlatformAccessory {
-  private serviceAccessory: Service;
-  private readonly Characteristic = this.platform.Characteristic;
-  private readonly Service = this.platform.Service;
-  private readonly log = this.platform.log;
-
-  // private get currentZoneData(): Zone {
-  //   return this.provider.getCurrentZoneInfo(this.zoneId);
-  // }
-
-  // private get fullData(): FullBoResponse {
-  //   return this.provider.getState() as FullBoResponse;
-  // }
-
+export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
   constructor(
-    private readonly platform: DeltaThermostatPlatform,
-    private readonly accessory: PlatformAccessory,
-    private readonly provider: ThermostatProvider,
-    private readonly zoneId: string
+    protected readonly platform: DeltaThermostatPlatform,
+    protected readonly accessory: PlatformAccessory,
+    protected readonly provider: ThermostatProvider,
+    protected readonly zoneId: string
   ) {
-    // set accessory information
-    this.accessory
-      .getService(this.Service.AccessoryInformation)!
-      .setCharacteristic(this.Characteristic.Manufacturer, 'Delta Controls')
-      .setCharacteristic(this.Characteristic.Model, 'eZNT-T100')
-      .setCharacteristic(this.Characteristic.SerialNumber, 'Overlay 045');
+    super(platform, accessory, provider, zoneId);
 
     // get the LightBulb service if it exists, otherwise create a new LightBulb service
     // you can create multiple services for each accessory
@@ -51,8 +44,6 @@ export class DeltaThermostatPlatformAccessory {
       this.Characteristic.Name,
       accessory.context.device.exampleDisplayName || this.accessory.displayName
     );
-
-    // each service must implement at-minimum the "required characteristics" for the given service type
 
     this.serviceAccessory
       .getCharacteristic(this.Characteristic.CurrentHeatingCoolingState)
@@ -70,9 +61,9 @@ export class DeltaThermostatPlatformAccessory {
     this.serviceAccessory
       .getCharacteristic(this.Characteristic.TargetTemperature)
       .setProps({
-        maxValue: this.provider.currentStateValue.limits.present_max_temp,
-        minValue: this.provider.currentStateValue?.limits.present_min_temp,
-        minStep: this.provider.currentStateValue?.limits.step_value,
+        maxValue: this.provider.cachedValue.limits.present_max_temp,
+        minValue: this.provider.cachedValue?.limits.present_min_temp,
+        minStep: this.provider.cachedValue?.limits.step_value,
       })
       .onGet(this.handleTargetTemperatureGet.bind(this))
       .onSet(this.handleTargetTemperatureSet.bind(this));
@@ -85,22 +76,22 @@ export class DeltaThermostatPlatformAccessory {
     this.serviceAccessory
       .getCharacteristic(this.Characteristic.CoolingThresholdTemperature)
       .setProps({
-        maxValue: this.provider.currentStateValue?.limits.present_max_temp,
-        minValue: this.provider.currentStateValue?.limits.present_min_temp,
-        minStep: this.provider.currentStateValue?.limits.step_value,
+        maxValue: this.provider.cachedValue?.limits.present_max_temp,
+        minValue: this.provider.cachedValue?.limits.present_min_temp,
+        minStep: this.provider.cachedValue?.limits.step_value,
       })
-      .onGet(this.handleCoolingThresholdTemperatureGet.bind(this));
-    // .onSet(this.handleHeatingThresholdTemperatureSet.bind(this));
+      .onGet(this.handleCoolingThresholdTemperatureGet.bind(this))
+      .onSet(this.handleCoolingThresholdTemperatureSet.bind(this));
 
     this.serviceAccessory
       .getCharacteristic(this.Characteristic.HeatingThresholdTemperature)
       .setProps({
-        maxValue: this.provider.currentStateValue?.limits.present_max_temp,
-        minValue: this.provider.currentStateValue?.limits.present_min_temp,
-        minStep: this.provider.currentStateValue?.limits.step_value,
+        maxValue: this.provider.cachedValue?.limits.present_max_temp,
+        minValue: this.provider.cachedValue?.limits.present_min_temp,
+        minStep: this.provider.cachedValue?.limits.step_value,
       })
-      .onGet(this.handleHeatingThresholdTemperatureGet.bind(this));
-    // .onSet(this.handleHeatingThresholdTemperatureSet.bind(this));
+      .onGet(this.handleHeatingThresholdTemperatureGet.bind(this))
+      .onSet(this.handleHeatingThresholdTemperatureSet.bind(this));
   }
 
   private async handleCoolingThresholdTemperatureGet(): Promise<number> {
@@ -110,6 +101,10 @@ export class DeltaThermostatPlatformAccessory {
       .then((state) => state?.setpoints.find((setpoint) => setpoint.type === SetPointType.Present)?.temperature);
   }
 
+  private async handleCoolingThresholdTemperatureSet(): Promise<void> {
+    this.log.debug('Triggered SET CoolingThresholdTemperature');
+  }
+
   private async handleHeatingThresholdTemperatureGet(): Promise<number> {
     this.log.debug('Triggered GET HeatingThresholdTemperature');
     return this.provider
@@ -117,9 +112,9 @@ export class DeltaThermostatPlatformAccessory {
       .then((state) => state?.setpoints.find((setpoint) => setpoint.type === SetPointType.Absent)?.temperature);
   }
 
-  //   private handleHeatingThresholdTemperatureSet(value) {
-  //     this.log.debug('Triggered SET HeatingThresholdTemperature');
-  //   }
+  private async handleHeatingThresholdTemperatureSet(): Promise<void> {
+    this.log.debug('Triggered SET HeatingThresholdTemperature');
+  }
 
   /**
    * Handle requests to get the current value of the 'Current Heating Cooling State' characteristic
@@ -135,7 +130,7 @@ export class DeltaThermostatPlatformAccessory {
   private async handleTargetHeatingCoolingStateGet(): Promise<TargetHeatingCoolingState> {
     this.log.debug('Triggered GET TargetHeatingCoolingState');
     return this.provider.getZoneById(this.zoneId).then((state) => {
-      const category = this.provider.currentStateValue?.category;
+      const category = this.provider.cachedValue?.category;
 
       return Object.keys(CONFIG_TARGET_STATE).find(
         (key) => <TergetStateFn>CONFIG_TARGET_STATE[key](state.mode, category)
@@ -146,8 +141,9 @@ export class DeltaThermostatPlatformAccessory {
   /**
    * Handle requests to set the 'Target Heating Cooling State' characteristic
    */
-  private handleTargetHeatingCoolingStateSet(value: TargetHeatingCoolingState): void {
+  private async handleTargetHeatingCoolingStateSet(value: TargetHeatingCoolingState): Promise<void> {
     this.log.debug('Triggered SET TargetHeatingCoolingState:', value);
+    return this.provider.setTargetState(value).then(() => undefined);
   }
 
   /**
@@ -199,7 +195,7 @@ export class DeltaThermostatPlatformAccessory {
     if (currentZone?.mode === ZoneMode.Off) {
       return CurrentHeatingCoolingState.OFF;
     }
-    if (this.provider.currentStateValue?.category === Category.Heating) {
+    if (this.provider.cachedValue?.category === Category.Heating) {
       if (currentZone?.temperature < currentZone?.effectiveSetpoint) {
         return CurrentHeatingCoolingState.HEAT;
       }
@@ -213,7 +209,7 @@ export class DeltaThermostatPlatformAccessory {
   }
 }
 
-type TergetStateFn = (...params: any[]) => boolean;
+type TergetStateFn = (...params: unknown[]) => boolean;
 const CONFIG_TARGET_STATE: {
   [key in TargetHeatingCoolingState]: TergetStateFn;
 } = {

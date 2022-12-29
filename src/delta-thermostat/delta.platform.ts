@@ -8,9 +8,12 @@ import {
   Characteristic,
 } from 'homebridge';
 import { DELTA_PLATFORM_NAME, PLUGIN_NAME } from '../settings';
-import { DeltaThermostatPlatformAccessory } from './deltaPlatformAccessory';
-import { ThermostatProvider } from '../thermostat.provider';
-import { ThermostatPlatformConfig } from '../models/thermostat-config';
+import { DeltaThermostatPlatformAccessory } from './delta-thermostat.accessory';
+import { ThermostatProvider } from '../thermostat.api-provider';
+import { ThermostatPlatformConfig } from '../models/thermostat.config';
+import { DeltaPresencePlatformAccessory } from './delta-presence.accessory';
+import { BaseThermostatAccessory } from '../models/delta-thermostat-accessory-base-class';
+import { DeltaTemperatureSensorAccessory } from './delta-temperature-sensor.accessory';
 
 /**
  * HomebridgePlatform
@@ -59,16 +62,28 @@ export class DeltaThermostatPlatform implements DynamicPlatformPlugin {
   async discoverDevices() {
     const response = await this.provider.getState();
     if (!response?.zones) {
-      this.log.warn('No zones founded');
+      this.log.error('No zones founded');
       return;
     }
     // A real plugin you would discover accessories from the local network, cloud services
     // or a user-defined array in the platform config.
-    const devices = response.zones.map((zone, index) => ({
+    const devices: Device[] = response.zones.map((zone, index) => ({
       zoneId: zone.id,
       uniqueId: `${DELTA_PLATFORM_NAME}_${zone.id}`,
       displayName: (this.config?.zonesNames || [])[index] || `zone_${zone.id}`,
+      istance: DeltaThermostatPlatformAccessory,
     }));
+    devices.push({
+      uniqueId: `${DELTA_PLATFORM_NAME}_at_home`,
+      displayName: 'Thermostat Presence',
+      istance: DeltaPresencePlatformAccessory,
+    });
+    devices.push({
+      uniqueId: `${DELTA_PLATFORM_NAME}_external_temperature`,
+      displayName: 'External Temperature Sensor',
+      istance: DeltaTemperatureSensorAccessory,
+    });
+
     // loop over the discovered devices and register each one if it has not already been registered
     for (const device of devices) {
       // generate a unique id for the accessory this should be generated from
@@ -90,7 +105,9 @@ export class DeltaThermostatPlatform implements DynamicPlatformPlugin {
 
         // create the accessory handler for the restored accessory
         // this is imported from `platformAccessory.ts`
-        new DeltaThermostatPlatformAccessory(this, existingAccessory, this.provider, device.zoneId);
+
+        new device.istance(this, existingAccessory, this.provider, device.zoneId);
+        // new DeltaThermostatPlatformAccessory(this, existingAccessory, this.provider, device.zoneId);
 
         // it is possible to remove platform accessories at any time using `api.unregisterPlatformAccessories`, eg.:
         // remove platform accessories when no longer present
@@ -109,7 +126,8 @@ export class DeltaThermostatPlatform implements DynamicPlatformPlugin {
 
         // create the accessory handler for the newly create accessory
         // this is imported from `platformAccessory.ts`
-        new DeltaThermostatPlatformAccessory(this, accessory, this.provider, device.zoneId);
+        // new DeltaThermostatPlatformAccessory(this, accessory, this.provider, device.zoneId);
+        new device.istance(this, accessory, this.provider, device.zoneId);
 
         // link the accessory to your platform
         this.api.registerPlatformAccessories(PLUGIN_NAME, DELTA_PLATFORM_NAME, [accessory]);
@@ -117,3 +135,10 @@ export class DeltaThermostatPlatform implements DynamicPlatformPlugin {
     }
   }
 }
+
+type Device = {
+  zoneId?: string;
+  uniqueId: string;
+  displayName: string;
+  istance: typeof BaseThermostatAccessory;
+};
