@@ -85,35 +85,35 @@ export class ThermostatProvider {
     return this.getState().then(filterStateByZoneId(zoneId));
   }
 
-  public async setTargetTemperature(zoneId: string, temperature: number): Promise<unknown> {
-    return;
-    // const currentZone = this.getCurrentZoneInfo(zoneId);
-    // const requests = {
-    //   request_type: 'post_bo_setpoint',
-    //   unitCode: this.store?.data?.unitCode,
-    //   category: this.store?.data?.category,
-    //   zones: [
-    //     {
-    //       id: zoneId,
-    //       mode: currentZone.mode,
-    //       currentManualTemperature: temperature,
-    //       ...(currentZone.mode === ZoneMode.Auto && {
-    //         setpoints: [
-    //           {
-    //             type: 'present',
-    //             temperature: temperature,
-    //           },
-    //         ],
-    //       }),
-    //     },
-    //   ],
-    // };
+  // public async setTargetTemperature(zoneId: string, temperature: number): Promise<unknown> {
+  //   return;
+  //   // const currentZone = this.getCurrentZoneInfo(zoneId);
+  //   // const requests = {
+  //   //   request_type: 'post_bo_setpoint',
+  //   //   unitCode: this.store?.data?.unitCode,
+  //   //   category: this.store?.data?.category,
+  //   //   zones: [
+  //   //     {
+  //   //       id: zoneId,
+  //   //       mode: currentZone.mode,
+  //   //       currentManualTemperature: temperature,
+  //   //       ...(currentZone.mode === ZoneMode.Auto && {
+  //   //         setpoints: [
+  //   //           {
+  //   //             type: 'present',
+  //   //             temperature: temperature,
+  //   //           },
+  //   //         ],
+  //   //       }),
+  //   //     },
+  //   //   ],
+  //   // };
 
-    // return this.apiIstance.post<FullBoResponse>('sensors_data_request', requests).then(({ data }) => {
-    //   this.getFullState(true);
-    //   this.log.info('setTargetTemperature', data);
-    // });
-  }
+  //   // return this.apiIstance.post<FullBoResponse>('sensors_data_request', requests).then(({ data }) => {
+  //   //   this.getFullState(true);
+  //   //   this.log.info('setTargetTemperature', data);
+  //   // });
+  // }
 
   public async setTargetState(state: TargetHeatingCoolingState): Promise<boolean> {
     return this.TARGET_STATE_MAP[state]().then((response) => {
@@ -218,110 +218,110 @@ export class ThermostatProvider {
   }
 }
 
-const REQ_AUTO_SET_POINT = {
-  request_type: 'post_bo_setpoint',
-  unitCode: '1021_0A_00_090_00',
-  category: 'heating',
-  zones: [
-    {
-      id: '1',
-      setpoints: [
-        {
-          type: 'present',
-          temperature: 22,
-        },
-        {
-          type: 'absent',
-          temperature: 19,
-        },
-      ],
-    },
-    {
-      id: '2',
-      setpoints: [
-        {
-          type: 'present',
-          temperature: 20,
-        },
-        {
-          type: 'absent',
-          temperature: 19,
-        },
-      ],
-    },
-    {
-      id: '3',
-      setpoints: [
-        {
-          type: 'present',
-          temperature: 21.5,
-        },
-        {
-          type: 'absent',
-          temperature: 19,
-        },
-      ],
-    },
-  ],
-};
+// const REQ_AUTO_SET_POINT = {
+//   request_type: 'post_bo_setpoint',
+//   unitCode: '1021_0A_00_090_00',
+//   category: 'heating',
+//   zones: [
+//     {
+//       id: '1',
+//       setpoints: [
+//         {
+//           type: 'present',
+//           temperature: 22,
+//         },
+//         {
+//           type: 'absent',
+//           temperature: 19,
+//         },
+//       ],
+//     },
+//     {
+//       id: '2',
+//       setpoints: [
+//         {
+//           type: 'present',
+//           temperature: 20,
+//         },
+//         {
+//           type: 'absent',
+//           temperature: 19,
+//         },
+//       ],
+//     },
+//     {
+//       id: '3',
+//       setpoints: [
+//         {
+//           type: 'present',
+//           temperature: 21.5,
+//         },
+//         {
+//           type: 'absent',
+//           temperature: 19,
+//         },
+//       ],
+//     },
+//   ],
+// };
 
-const REQ_MANUAL_SET = {
-  request_type: 'post_bo_setpoint',
-  unitCode: '1021_0A_00_090_00',
-  category: 'heating',
-  zones: [
-    {
-      id: '1',
-      mode: 'manual',
-      currentManualTemperature: 19,
-      setpoints: [
-        {
-          type: 'effective',
-          temperature: 19,
-        },
-      ],
-    },
-  ],
-};
+// const REQ_MANUAL_SET = {
+//   request_type: 'post_bo_setpoint',
+//   unitCode: '1021_0A_00_090_00',
+//   category: 'heating',
+//   zones: [
+//     {
+//       id: '1',
+//       mode: 'manual',
+//       currentManualTemperature: 19,
+//       setpoints: [
+//         {
+//           type: 'effective',
+//           temperature: 19,
+//         },
+//       ],
+//     },
+//   ],
+// };
 
-const REQ_MANUAL_SET_TEMP = {
-  request_type: 'post_bo_setpoint',
-  unitCode: '1021_0A_00_090_00',
-  category: 'heating',
-  zones: [
-    {
-      id: '1',
-      currentManualTemperature: 19,
-      mode: 'manual',
-    },
-    {
-      id: '2',
-      currentManualTemperature: 20,
-      mode: 'manual',
-    },
-    {
-      id: '3',
-      currentManualTemperature: 22,
-      mode: 'manual',
-    },
-  ],
-};
+// const REQ_MANUAL_SET_TEMP = {
+//   request_type: 'post_bo_setpoint',
+//   unitCode: '1021_0A_00_090_00',
+//   category: 'heating',
+//   zones: [
+//     {
+//       id: '1',
+//       currentManualTemperature: 19,
+//       mode: 'manual',
+//     },
+//     {
+//       id: '2',
+//       currentManualTemperature: 20,
+//       mode: 'manual',
+//     },
+//     {
+//       id: '3',
+//       currentManualTemperature: 22,
+//       mode: 'manual',
+//     },
+//   ],
+// };
 
-const REQ_OFF = {
-  request_type: 'post_bo_setpoint',
-  unitCode: '1021_0A_00_090_00',
-  category: 'heating',
-  zones: [
-    {
-      id: '1',
-      mode: 'off',
-      expiration: 0,
-      setpoints: [
-        {
-          type: 'effective',
-          temperature: 19,
-        },
-      ],
-    },
-  ],
-};
+// const REQ_OFF = {
+//   request_type: 'post_bo_setpoint',
+//   unitCode: '1021_0A_00_090_00',
+//   category: 'heating',
+//   zones: [
+//     {
+//       id: '1',
+//       mode: 'off',
+//       expiration: 0,
+//       setpoints: [
+//         {
+//           type: 'effective',
+//           temperature: 19,
+//         },
+//       ],
+//     },
+//   ],
+// };
