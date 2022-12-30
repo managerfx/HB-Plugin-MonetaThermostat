@@ -88,7 +88,7 @@ export class ThermostatProvider {
         const response = await this.thermostatApi(RequestType.Full);
         if (response) {
           this.store = {
-            expirationDate: addToDate(new Date(), this.config?.thermostatPollingInterval || 10, 's'),
+            expirationDate: addToDate(new Date(), this.config?.thermostatPollingInterval || 60, 's'),
             data: response,
             pending: false,
           };

@@ -8,12 +8,13 @@ import {
 } from 'homebridge';
 import { DeltaThermostatPlatform } from '../delta-thermostat/delta.platform';
 import { ThermostatProvider } from '../api/thermostat.api-provider';
+import { cloneDeep } from 'lodash';
 
 export class BaseThermostatAccessory {
   protected serviceAccessory: Service;
   protected readonly Characteristic = this.platform.Characteristic;
   protected readonly Service = this.platform.Service;
-  protected readonly log = this.platform.log;
+  protected readonly log = cloneDeep(this.platform.log);
 
   CHARACTERISTIC_HANDLER_CONFIG: CharacteristicHandlerMapItem[];
   private SERVICE_TYPE: typeof Service;
@@ -24,6 +25,8 @@ export class BaseThermostatAccessory {
     protected readonly provider: ThermostatProvider,
     protected readonly zoneId?: string
   ) {
+    Object.assign(this.log, { prefix: `${this.log.prefix} ${this.accessory.displayName}` });
+
     // set accessory information
     this.accessory
       .getService(this.Service.AccessoryInformation)!
@@ -34,9 +37,10 @@ export class BaseThermostatAccessory {
 
   setServiceType(serviceType: typeof Service) {
     this.SERVICE_TYPE = serviceType;
+
     this.serviceAccessory =
       this.accessory.getService(<WithUUID<typeof Service>>this.SERVICE_TYPE) ||
-      this.accessory.addService(this.SERVICE_TYPE as any, this.accessory.displayName);
+      this.accessory.addService(<any>this.SERVICE_TYPE, this.accessory.displayName);
 
     // set the service name, this is what is displayed as the default name on the Home app
     // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.

@@ -27,7 +27,7 @@
         }
       },
       "thermostatPollingInterval": {
-        "title": "Polling Interval API (Minutes)",
+        "title": "Polling Interval API (Seconds)",
         "type": "number",
         "required": false
       }
