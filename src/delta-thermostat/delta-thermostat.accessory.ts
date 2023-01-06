@@ -1,9 +1,9 @@
 import { PlatformAccessory } from 'homebridge';
-import { Category, RequestType, SetPointType, ZoneMode } from '../models/thermostat.model';
+import { Category, RequestType, SeasonName, SetPointType, ZoneMode } from '../models/thermostat.model';
 import { ThermostatProvider } from '../api/thermostat.api-provider';
 import { DeltaThermostatPlatform } from './delta.platform';
 import { filterStateByZoneId } from '../utility.fuctions';
-import { BaseThermostatAccessory, CharacteristicHandlerMapItem } from '../models/delta-thermostat-accessory-base-class';
+import { BaseThermostatAccessory, CharacteristicHandlerMapItem } from './delta-thermostat-base.accessory';
 
 export enum CurrentHeatingCoolingState {
   OFF,
@@ -17,26 +17,30 @@ export enum TargetHeatingCoolingState {
   COOL,
   AUTO,
 }
+export enum TemperatureDisplayUnits {
+  CELSIUS,
+  FAHRENHEIT,
+}
 
 export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
   CHARACTERISTIC_HANDLER_CONFIG: CharacteristicHandlerMapItem[] = [
     {
       characteristic: this.Characteristic.CurrentHeatingCoolingState,
-      getCallbackFn: this.handleCurrentHeatingCoolingStateGet,
+      getFn: this.handleCurrentHeatingCoolingStateGet,
     },
     {
       characteristic: this.Characteristic.TargetHeatingCoolingState,
-      getCallbackFn: this.handleTargetHeatingCoolingStateGet,
-      setCallbackFn: this.handleTargetHeatingCoolingStateSet,
+      getFn: this.handleTargetHeatingCoolingStateGet,
+      setFn: this.handleTargetHeatingCoolingStateSet,
     },
     {
       characteristic: this.Characteristic.CurrentTemperature,
-      getCallbackFn: this.handleCurrentTemperatureGet,
+      getFn: this.handleCurrentTemperatureGet,
     },
     {
       characteristic: this.Characteristic.TargetTemperature,
-      getCallbackFn: this.handleTargetTemperatureGet,
-      setCallbackFn: this.handleTargetTemperatureSet,
+      getFn: this.handleTargetTemperatureGet,
+      setFn: this.handleTargetTemperatureSet,
       props: {
         maxValue: this.provider.getCurrentState().limits.present_max_temp,
         minValue: this.provider.getCurrentState().limits.present_min_temp,
@@ -45,12 +49,12 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
     },
     {
       characteristic: this.Characteristic.TemperatureDisplayUnits,
-      getCallbackFn: this.handleTemperatureDisplayUnitsGet,
+      getFn: this.handleTemperatureDisplayUnitsGet,
     },
     {
       characteristic: this.Characteristic.CoolingThresholdTemperature,
-      getCallbackFn: this.handleCoolingThresholdTemperatureGet,
-      setCallbackFn: this.handleCoolingThresholdTemperatureSet,
+      getFn: this.handleCoolingThresholdTemperatureGet,
+      setFn: this.handleCoolingThresholdTemperatureSet,
       props: {
         maxValue: this.provider.getCurrentState().limits.present_max_temp,
         minValue: this.provider.getCurrentState().limits.present_min_temp,
@@ -59,8 +63,8 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
     },
     {
       characteristic: this.Characteristic.HeatingThresholdTemperature,
-      getCallbackFn: this.handleHeatingThresholdTemperatureGet,
-      setCallbackFn: this.handleHeatingThresholdTemperatureSet,
+      getFn: this.handleHeatingThresholdTemperatureGet,
+      setFn: this.handleHeatingThresholdTemperatureSet,
       props: {
         maxValue: this.provider.getCurrentState().limits.absent_max_temp,
         minValue: this.provider.getCurrentState().limits.absent_min_temp,
@@ -77,24 +81,7 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
   ) {
     super(platform, accessory, provider, zoneId);
     super.setServiceType(this.Service.Thermostat);
-    this.subscribeOnEvent();
     this.initCharacteristicHandlers();
-  }
-
-  private subscribeOnEvent() {
-    this.provider.thermostatEmitter.on(RequestType.Full, () => {
-      this.log.warn('nuovo dato scateno tutti i getter!!!');
-
-      for (const current of this.CHARACTERISTIC_HANDLER_CONFIG) {
-        if (current.getCallbackFn) {
-          const characteristic = this.serviceAccessory.getCharacteristic(current.characteristic);
-          const result = current.getCallbackFn.bind(this)();
-
-          this.log.info(`updating ${current.characteristic.name} with value:`, result);
-          characteristic.updateValue(result);
-        }
-      }
-    });
   }
 
   private handleCoolingThresholdTemperatureGet(): number {
@@ -136,10 +123,10 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
   private handleTargetHeatingCoolingStateGet(): TargetHeatingCoolingState {
     this.log.debug('Triggered GET TargetHeatingCoolingState');
     const zone = this.provider.getZoneById(this.zoneId);
-    const category = this.provider.getCurrentState().category;
+    const season = this.provider.getCurrentState().season?.id;
 
     return Object.keys(CONFIG_TARGET_STATE).find(
-      (key) => <TergetStateFn>CONFIG_TARGET_STATE[key](zone.mode, category)
+      (key) => <TergetStateFn>CONFIG_TARGET_STATE[key](zone.mode, season)
     ) as unknown as TargetHeatingCoolingState;
   }
 
@@ -174,21 +161,13 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
    */
   private handleTargetTemperatureSet(value: number): void {
     this.log.debug('Triggered SET TargetTemperature:', value);
-    // this.provider.setTargetTemperature(this.zoneId, value);
   }
 
-  /**
-   * Handle requests to get the current value of the 'Temperature Display Units' characteristic
-   */
   private handleTemperatureDisplayUnitsGet() {
     this.log.debug('Triggered GET TemperatureDisplayUnits');
-    // set this to a valid value for TemperatureDisplayUnits
-    return this.platform.Characteristic.TemperatureDisplayUnits.CELSIUS;
+    return TemperatureDisplayUnits.CELSIUS;
   }
 
-  /**
-   * Handle requests to set the 'Temperature Display Units' characteristic
-   */
   // private handleTemperatureDisplayUnitsSet(value: number) {
   //   this.log.debug('Triggered SET TemperatureDisplayUnits:', value);
   // }
@@ -200,7 +179,7 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
     if (currentZone?.mode === ZoneMode.Off) {
       return CurrentHeatingCoolingState.OFF;
     }
-    if (currentState?.category === Category.Heating) {
+    if (currentState?.season?.id === SeasonName.Winter) {
       if (currentZone?.temperature < currentZone?.effectiveSetpoint) {
         return CurrentHeatingCoolingState.HEAT;
       }
@@ -221,8 +200,8 @@ const CONFIG_TARGET_STATE: {
   [TargetHeatingCoolingState.OFF]: (mode: ZoneMode) => mode === ZoneMode.Off,
   [TargetHeatingCoolingState.AUTO]: (mode: ZoneMode) =>
     [ZoneMode.Auto, ZoneMode.Holiday, ZoneMode.Party].includes(mode),
-  [TargetHeatingCoolingState.HEAT]: (mode: ZoneMode, currentCategory: Category) =>
-    mode === ZoneMode.Manual && currentCategory === Category.Heating,
-  [TargetHeatingCoolingState.COOL]: (mode: ZoneMode, currentCategory: Category) =>
-    mode === ZoneMode.Manual && currentCategory !== Category.Heating,
+  [TargetHeatingCoolingState.HEAT]: (mode: ZoneMode, currentSeason: SeasonName.Winter) =>
+    mode === ZoneMode.Manual && currentSeason === SeasonName.Winter,
+  [TargetHeatingCoolingState.COOL]: (mode: ZoneMode, currentSeason: SeasonName.Winter) =>
+    mode === ZoneMode.Manual && currentSeason !== SeasonName.Winter,
 };

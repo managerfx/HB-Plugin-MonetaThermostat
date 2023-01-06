@@ -4,7 +4,7 @@ import { DeltaThermostatPlatformAccessory } from './delta-thermostat.accessory';
 import { ThermostatProvider } from '../api/thermostat.api-provider';
 import { ThermostatPlatformConfig } from '../models/thermostat.config';
 import { DeltaPresencePlatformAccessory } from './delta-presence.accessory';
-import { BaseThermostatAccessory } from '../models/delta-thermostat-accessory-base-class';
+import { BaseThermostatAccessory } from './delta-thermostat-base.accessory';
 import { DeltaTemperatureSensorAccessory } from './delta-temperature-sensor.accessory';
 
 /**
@@ -51,7 +51,7 @@ export class DeltaThermostatPlatform implements DynamicPlatformPlugin {
    * Accessories must only be registered once, previously created accessories
    * must not be registered again to prevent "duplicate UUID" errors.
    */
-  async discoverDevices() {
+  private async discoverDevices() {
     const response = await this.provider.getState();
     if (!response?.zones) {
       this.log.error('No zones founded');

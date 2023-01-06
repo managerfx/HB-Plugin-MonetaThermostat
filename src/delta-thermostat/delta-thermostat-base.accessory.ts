@@ -6,15 +6,16 @@ import {
   Service,
   WithUUID,
 } from 'homebridge';
-import { DeltaThermostatPlatform } from '../delta-thermostat/delta.platform';
+import { DeltaThermostatPlatform } from './delta.platform';
 import { ThermostatProvider } from '../api/thermostat.api-provider';
 import { cloneDeep } from 'lodash';
+import { RequestType } from '../models/thermostat.model';
 
 export class BaseThermostatAccessory {
   protected serviceAccessory: Service;
   protected readonly Characteristic = this.platform.Characteristic;
   protected readonly Service = this.platform.Service;
-  protected readonly log = cloneDeep(this.platform.log);
+  protected readonly log = cloneDeep(this.platform.log); // cloning to generetare new logger istance
 
   CHARACTERISTIC_HANDLER_CONFIG: CharacteristicHandlerMapItem[];
   private SERVICE_TYPE: typeof Service;
@@ -25,7 +26,7 @@ export class BaseThermostatAccessory {
     protected readonly provider: ThermostatProvider,
     protected readonly zoneId?: string
   ) {
-    Object.assign(this.log, { prefix: `${this.log.prefix} ${this.accessory.displayName}` });
+    Object.assign(this.log, { prefix: `${this.log.prefix} _${this.accessory.displayName}` });
 
     // set accessory information
     this.accessory
@@ -40,6 +41,7 @@ export class BaseThermostatAccessory {
 
     this.serviceAccessory =
       this.accessory.getService(<WithUUID<typeof Service>>this.SERVICE_TYPE) ||
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       this.accessory.addService(<any>this.SERVICE_TYPE, this.accessory.displayName);
 
     // set the service name, this is what is displayed as the default name on the Home app
@@ -51,6 +53,7 @@ export class BaseThermostatAccessory {
   }
 
   initCharacteristicHandlers(config?: CharacteristicHandlerMapItem[]) {
+    this.subscribeOnNewThermostatDataEvent();
     if (config) {
       this.CHARACTERISTIC_HANDLER_CONFIG = config;
     }
@@ -62,11 +65,27 @@ export class BaseThermostatAccessory {
         this.log.debug(current.characteristic.name, current.props);
         characteristic.setProps(current?.props);
       }
-      if (current?.getCallbackFn) {
-        characteristic.onGet(current.getCallbackFn.bind(this));
+      if (current?.getFn) {
+        characteristic.onGet(current.getFn.bind(this));
       }
-      if (current?.setCallbackFn) {
-        characteristic.onSet(current.getCallbackFn.bind(this));
+      if (current?.setFn) {
+        characteristic.onSet(current.getFn.bind(this));
+      }
+    });
+  }
+
+  private subscribeOnNewThermostatDataEvent() {
+    this.provider.thermostatEmitter.on(RequestType.Full, () => {
+      this.log.info('New full_bo data retrieved! updating value...');
+
+      for (const config of this.CHARACTERISTIC_HANDLER_CONFIG) {
+        if (config.getFn) {
+          const characteristic = this.serviceAccessory.getCharacteristic(config.characteristic);
+          const newValue = config.getFn.bind(this)(); // calling handler function to caluculate new value
+
+          this.log.debug(`Updating ${config.characteristic.name} with value:`, newValue);
+          characteristic.updateValue(newValue);
+        }
       }
     });
   }
@@ -76,7 +95,7 @@ export type CharacteristicHandlerMapItem = {
   characteristic: WithUUID<{
     new (): Characteristic;
   }>;
-  getCallbackFn: () => string | number;
-  setCallbackFn?: (args: unknown) => void;
+  getFn: () => string | number;
+  setFn?: (args: unknown) => void;
   props?: PartialAllowingNull<CharacteristicProps>;
 };

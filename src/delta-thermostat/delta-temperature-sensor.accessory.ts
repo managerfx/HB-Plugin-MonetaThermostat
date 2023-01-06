@@ -1,9 +1,16 @@
 import { PlatformAccessory } from 'homebridge';
 import { ThermostatProvider } from '../api/thermostat.api-provider';
 import { DeltaThermostatPlatform } from './delta.platform';
-import { BaseThermostatAccessory } from '../models/delta-thermostat-accessory-base-class';
+import { BaseThermostatAccessory, CharacteristicHandlerMapItem } from './delta-thermostat-base.accessory';
 
 export class DeltaTemperatureSensorAccessory extends BaseThermostatAccessory {
+  CHARACTERISTIC_HANDLER_CONFIG: CharacteristicHandlerMapItem[] = [
+    {
+      characteristic: this.Characteristic.CurrentTemperature,
+      getFn: this.handleCurrentTemperatureGet,
+    },
+  ];
+
   constructor(
     protected readonly platform: DeltaThermostatPlatform,
     protected readonly accessory: PlatformAccessory,
@@ -11,21 +18,8 @@ export class DeltaTemperatureSensorAccessory extends BaseThermostatAccessory {
     protected readonly zoneId: string
   ) {
     super(platform, accessory, provider, zoneId);
-
-    this.serviceAccessory =
-      this.accessory.getService(this.Service.TemperatureSensor) ||
-      this.accessory.addService(this.Service.TemperatureSensor, this.accessory.displayName);
-
-    // set the service name, this is what is displayed as the default name on the Home app
-    // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
-    this.serviceAccessory.setCharacteristic(
-      this.Characteristic.Name,
-      accessory.context.device.exampleDisplayName || this.accessory.displayName
-    );
-
-    this.serviceAccessory
-      .getCharacteristic(this.Characteristic.CurrentTemperature)
-      .onGet(this.handleCurrentTemperatureGet.bind(this));
+    super.setServiceType(this.Service.TemperatureSensor);
+    this.initCharacteristicHandlers();
   }
 
   private handleCurrentTemperatureGet(): number {

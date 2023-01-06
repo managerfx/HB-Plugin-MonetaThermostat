@@ -5,6 +5,7 @@ import { ThermostatModel, RequestType, Zone, ZoneMode, SetPointType } from '../m
 import { ThermostatPlatformConfig } from '../models/thermostat.config';
 import { TargetHeatingCoolingState } from '../delta-thermostat/delta-thermostat.accessory';
 import EventEmitter from 'events';
+import { isEmpty } from 'lodash';
 
 export type ThermostaState = {
   expirationDate: Date | null;
@@ -68,14 +69,16 @@ export class ThermostatProvider {
     return this.apiIstance
       .post<ThermostatModel>('sensors_data_request', composedRequest)
       .then((response) => {
+        if (response.status !== 200 || isEmpty(response.data)) {
+          throw new Error(`Error STATUS ${response?.status}`);
+        }
         this.log.debug(`Thermostat API - RESPONSE: STATUS ${response?.status}`, response?.data);
-
         requestType !== RequestType.Full && this.setCacheInvalid();
         return response?.data;
       })
       .catch((err) => {
-        this.log.error('Error calling thermostat API', err);
-        throw new Error(err);
+        this.log.error(err?.message || 'Error calling thermostat API', err);
+        throw err;
       });
   }
 
