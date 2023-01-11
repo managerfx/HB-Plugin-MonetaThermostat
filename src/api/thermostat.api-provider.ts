@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { API, Logger } from 'homebridge';
 import { addTime as addToDate, filterStateByZoneId, Subset } from '../utility.fuctions';
-import { ThermostatModel, RequestType, Zone, ZoneMode, SetPointType } from '../models/thermostat.model';
+import { ThermostatModel, RequestType, Zone, ZoneMode, SetPointType, Setpoint } from '../models/thermostat.model';
 import { ThermostatPlatformConfig } from '../models/thermostat.config';
 import { TargetHeatingCoolingState } from '../delta-thermostat/delta-thermostat.accessory';
 import EventEmitter from 'events';
@@ -224,26 +224,41 @@ export class ThermostatProvider {
     presentTemperature?: number,
     absentTemperature?: number
   ): Promise<unknown> {
+    const skipPresent =
+      !presentTemperature ||
+      this.getZoneById(zoneId).setpoints.find((s) => s.type === SetPointType.Present)?.temperature ===
+        presentTemperature;
+
+    const skipAbsent =
+      !absentTemperature ||
+      this.getZoneById(zoneId).setpoints.find((s) => s.type === SetPointType.Absent)?.temperature === absentTemperature;
+
+    const setpoints: Setpoint[] = [];
+    if (!skipPresent) {
+      setpoints.push({
+        type: SetPointType.Present,
+        temperature: presentTemperature,
+      });
+    }
+    if (!skipAbsent) {
+      setpoints.push({
+        type: SetPointType.Absent,
+        temperature: absentTemperature,
+      });
+    }
+    this.log.debug('sepoinst: ', setpoints);
+    if (setpoints.length === 0) {
+      this.log.debug('setPresentAbsentTemperatureByZoneId - update not required. Skipping API call...');
+      return;
+    }
+
     const request: Subset<ThermostatModel> = {
       unitCode: this.store?.data?.unitCode,
       category: this.store?.data?.category,
       zones: [
         {
           id: zoneId,
-          setpoints: [
-            {
-              ...(presentTemperature && {
-                type: SetPointType.Present,
-                temperature: presentTemperature,
-              }),
-            },
-            {
-              ...(absentTemperature && {
-                type: SetPointType.Absent,
-                temperature: absentTemperature,
-              }),
-            },
-          ],
+          setpoints,
         },
       ],
     };

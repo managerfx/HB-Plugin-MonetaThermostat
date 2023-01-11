@@ -159,8 +159,9 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
    */
   private handleTargetTemperatureSet(manualTemperature: number): void {
     this.log.debug('Triggered SET TargetTemperature:', manualTemperature || 'no val');
-    this.provider.setCurrentMananualTemperatureByZoneId(this.zoneId, manualTemperature);
-    return;
+    if (this.handleTargetHeatingCoolingStateGet() != TargetHeatingCoolingState.AUTO) {
+      this.provider.setCurrentMananualTemperatureByZoneId(this.zoneId, manualTemperature);
+    }
   }
 
   private handleTemperatureDisplayUnitsGet() {
