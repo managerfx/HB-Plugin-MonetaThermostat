@@ -1,9 +1,9 @@
 import { PlatformAccessory } from 'homebridge';
-import { Category, RequestType, SeasonName, SetPointType, ZoneMode } from '../models/thermostat.model';
+import { SeasonName, SetPointType, ZoneMode } from '../models/thermostat.model';
 import { ThermostatProvider } from '../api/thermostat.api-provider';
 import { DeltaThermostatPlatform } from './delta.platform';
 import { filterStateByZoneId } from '../utility.fuctions';
-import { BaseThermostatAccessory, CharacteristicHandlerMapItem } from './delta-thermostat-base.accessory';
+import { BaseThermostatAccessory, CharacteristicHandlerMapItem } from './base-thermostat.accessory';
 
 export enum CurrentHeatingCoolingState {
   OFF,
@@ -29,7 +29,7 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
       getFn: this.handleCurrentHeatingCoolingStateGet,
     },
     {
-      characteristic: this.Characteristic.TargetHeatingCoolingState,
+      characteristic: this.Characteristic.TargetHeatingCoolingState, // MANUAL mode. If season is Summer???
       getFn: this.handleTargetHeatingCoolingStateGet,
       setFn: this.handleTargetHeatingCoolingStateSet,
     },
@@ -38,7 +38,7 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
       getFn: this.handleCurrentTemperatureGet,
     },
     {
-      characteristic: this.Characteristic.TargetTemperature,
+      characteristic: this.Characteristic.TargetTemperature, // MANUAL mode
       getFn: this.handleTargetTemperatureGet,
       setFn: this.handleTargetTemperatureSet,
       props: {
@@ -62,7 +62,7 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
       },
     },
     {
-      characteristic: this.Characteristic.HeatingThresholdTemperature,
+      characteristic: this.Characteristic.HeatingThresholdTemperature, // AUTO mode MIN temperature value
       getFn: this.handleHeatingThresholdTemperatureGet,
       setFn: this.handleHeatingThresholdTemperatureSet,
       props: {
@@ -88,25 +88,23 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
     this.log.debug('Triggered GET HeatingThresholdTemperature');
 
     const currentZone = this.provider.getZoneById(this.zoneId);
-    const presentTemperature = currentZone.setpoints.find(
-      (setpoint) => setpoint.type === SetPointType.Present
-    )?.temperature;
-
+    const presentTemperature = currentZone.setpoints.find((s) => s.type === SetPointType.Present)?.temperature;
     return presentTemperature > currentZone.effectiveSetpoint ? presentTemperature : currentZone.effectiveSetpoint;
   }
 
-  private async handleCoolingThresholdTemperatureSet(): Promise<void> {
-    this.log.debug('Triggered SET CoolingThresholdTemperature');
+  private handleCoolingThresholdTemperatureSet(presentTemperature: number): void {
+    this.log.debug('Triggered SET CoolingThresholdTemperature', presentTemperature || 'no val');
+    this.provider.setPresentAbsentTemperatureByZoneId(this.zoneId, presentTemperature);
   }
 
   private handleHeatingThresholdTemperatureGet(): number {
     this.log.debug('Triggered GET HeatingThresholdTemperature');
-    return this.provider.getZoneById(this.zoneId)?.setpoints.find((setpoint) => setpoint.type === SetPointType.Absent)
-      ?.temperature;
+    return this.provider.getZoneById(this.zoneId)?.setpoints.find((s) => s.type === SetPointType.Absent)?.temperature;
   }
 
-  private async handleHeatingThresholdTemperatureSet(): Promise<void> {
-    this.log.debug('Triggered SET HeatingThresholdTemperature');
+  private handleHeatingThresholdTemperatureSet(absentTemperature: number): void {
+    this.log.debug('Triggered SET HeatingThresholdTemperature', absentTemperature || 'no val');
+    this.provider.setPresentAbsentTemperatureByZoneId(this.zoneId, null, absentTemperature);
   }
 
   /**
@@ -133,9 +131,9 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
   /**
    * Handle requests to set the 'Target Heating Cooling State' characteristic
    */
-  private async handleTargetHeatingCoolingStateSet(value: TargetHeatingCoolingState): Promise<void> {
-    this.log.debug('Triggered SET TargetHeatingCoolingState:', value);
-    return this.provider.setTargetState(value).then(() => undefined);
+  private handleTargetHeatingCoolingStateSet(value: TargetHeatingCoolingState): void {
+    this.log.debug('Triggered SET TargetHeatingCoolingState:', value || 'no val');
+    this.provider.setTargetState(value);
   }
 
   /**
@@ -159,8 +157,10 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
   /**
    * Handle requests to set the "Target Temperature" characteristic
    */
-  private handleTargetTemperatureSet(value: number): void {
-    this.log.debug('Triggered SET TargetTemperature:', value);
+  private handleTargetTemperatureSet(manualTemperature: number): void {
+    this.log.debug('Triggered SET TargetTemperature:', manualTemperature || 'no val');
+    this.provider.setCurrentMananualTemperatureByZoneId(this.zoneId, manualTemperature);
+    return;
   }
 
   private handleTemperatureDisplayUnitsGet() {
@@ -178,17 +178,14 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
 
     if (currentZone?.mode === ZoneMode.Off) {
       return CurrentHeatingCoolingState.OFF;
-    }
-    if (currentState?.season?.id === SeasonName.Winter) {
-      if (currentZone?.temperature < currentZone?.effectiveSetpoint) {
-        return CurrentHeatingCoolingState.HEAT;
-      }
-      return CurrentHeatingCoolingState.OFF;
+    } else if (currentState?.season?.id === SeasonName.Winter) {
+      return currentZone?.temperature < currentZone?.effectiveSetpoint
+        ? CurrentHeatingCoolingState.HEAT
+        : CurrentHeatingCoolingState.OFF;
     } else {
-      if (currentZone?.temperature > currentZone?.effectiveSetpoint) {
-        return CurrentHeatingCoolingState.COOL;
-      }
-      return CurrentHeatingCoolingState.OFF;
+      return currentZone?.temperature > currentZone?.effectiveSetpoint
+        ? CurrentHeatingCoolingState.COOL
+        : CurrentHeatingCoolingState.OFF;
     }
   }
 }

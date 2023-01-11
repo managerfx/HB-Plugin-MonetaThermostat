@@ -1,7 +1,7 @@
 import { PlatformAccessory } from 'homebridge';
 import { ThermostatProvider } from '../api/thermostat.api-provider';
 import { DeltaThermostatPlatform } from './delta.platform';
-import { BaseThermostatAccessory, CharacteristicHandlerMapItem } from './delta-thermostat-base.accessory';
+import { BaseThermostatAccessory, CharacteristicHandlerMapItem } from './base-thermostat.accessory';
 
 enum OccupancyDetected {
   OCCUPANCY_NOT_DETECTED,

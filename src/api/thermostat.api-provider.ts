@@ -20,15 +20,6 @@ export class ThermostatProvider {
     pending: false,
   };
 
-  readonly TARGET_STATE_MAP: {
-    [key in TargetHeatingCoolingState]: () => Promise<void | unknown>;
-  } = {
-    [TargetHeatingCoolingState.AUTO]: this.setAutoTargetState.bind(this),
-    [TargetHeatingCoolingState.COOL]: () => new Promise(() => null),
-    [TargetHeatingCoolingState.HEAT]: () => new Promise(() => null),
-    [TargetHeatingCoolingState.OFF]: this.setOffTargetState.bind(this),
-  };
-
   readonly DEFAULT_ZONE_ID = '1';
   readonly thermostatEmitter = new EventEmitter();
 
@@ -52,12 +43,13 @@ export class ThermostatProvider {
     return this.store?.data;
   }
 
-  private setCacheInvalid(): void {
+  private refreshState(): void {
     this.store = {
       ...this.store,
-      expirationDate: new Date(),
+      expirationDate: null,
     };
     this.log.debug('Cache invalidated');
+    this.getState();
   }
 
   private async thermostatApi(requestType: RequestType, request?: Subset<ThermostatModel>): Promise<ThermostatModel> {
@@ -73,7 +65,12 @@ export class ThermostatProvider {
           throw new Error(`Error STATUS ${response?.status}`);
         }
         this.log.debug(`Thermostat API - RESPONSE: STATUS ${response?.status}`, response?.data);
-        requestType !== RequestType.Full && this.setCacheInvalid();
+
+        // if is set request (eg: update termperature), then previus data is not valid
+        if (requestType !== RequestType.Full) {
+          this.refreshState();
+        }
+
         return response?.data;
       })
       .catch((err) => {
@@ -150,7 +147,15 @@ export class ThermostatProvider {
   // }
 
   public async setTargetState(state: TargetHeatingCoolingState): Promise<boolean> {
-    return this.TARGET_STATE_MAP[state]().then((response) => !!response);
+    const TARGET_STATE_MAP: {
+      [key in TargetHeatingCoolingState]: () => Promise<void | unknown>;
+    } = {
+      [TargetHeatingCoolingState.AUTO]: this.setAutoTargetState.bind(this),
+      [TargetHeatingCoolingState.COOL]: () => new Promise(() => null),
+      [TargetHeatingCoolingState.HEAT]: () => new Promise(() => null),
+      [TargetHeatingCoolingState.OFF]: this.setOffTargetState.bind(this),
+    };
+    return TARGET_STATE_MAP[state]().then((response) => !!response);
   }
 
   private async setOffTargetState(): Promise<unknown> {
@@ -195,13 +200,31 @@ export class ThermostatProvider {
     return new Promise((resolve) => setTimeout(resolve, timer, outValue));
   }
 
+  public async setCurrentMananualTemperatureByZoneId(
+    zoneId: string,
+    currentManualTemperature: number
+  ): Promise<unknown> {
+    const request: Subset<ThermostatModel> = {
+      unitCode: this.store?.data?.unitCode,
+      category: this.store?.data?.category,
+      zones: [
+        {
+          id: zoneId,
+          currentManualTemperature,
+          mode: ZoneMode.Manual,
+        },
+      ],
+    };
+    this.log.info('setCurrentMananualTemperatureByZoneId');
+    return this.thermostatApi(RequestType.Setpoint, request);
+  }
+
   public async setPresentAbsentTemperatureByZoneId(
     zoneId: string,
     presentTemperature?: number,
     absentTemperature?: number
   ): Promise<unknown> {
     const request: Subset<ThermostatModel> = {
-      request_type: RequestType.Setpoint,
       unitCode: this.store?.data?.unitCode,
       category: this.store?.data?.category,
       zones: [
@@ -215,7 +238,7 @@ export class ThermostatProvider {
               }),
             },
             {
-              ...(presentTemperature && {
+              ...(absentTemperature && {
                 type: SetPointType.Absent,
                 temperature: absentTemperature,
               }),

@@ -8,7 +8,7 @@ import {
 } from 'homebridge';
 import { DeltaThermostatPlatform } from './delta.platform';
 import { ThermostatProvider } from '../api/thermostat.api-provider';
-import { cloneDeep } from 'lodash';
+import { cloneDeep, debounce } from 'lodash';
 import { RequestType } from '../models/thermostat.model';
 
 export class BaseThermostatAccessory {
@@ -69,14 +69,18 @@ export class BaseThermostatAccessory {
         characteristic.onGet(current.getFn.bind(this));
       }
       if (current?.setFn) {
-        characteristic.onSet(current.getFn.bind(this));
+        const fn = (args: unknown) => {
+          this.log.warn(`Calling SET function with values [${args}] on ${current.characteristic.name}`);
+          current.setFn.bind(this)(args);
+        };
+        characteristic.onSet(debounce(fn, 1000));
       }
     });
   }
 
   private subscribeOnNewThermostatDataEvent() {
     this.provider.thermostatEmitter.on(RequestType.Full, () => {
-      this.log.info('New full_bo data retrieved! updating value...');
+      this.log.info('New full_bo data retrieved! Updating values...');
 
       for (const config of this.CHARACTERISTIC_HANDLER_CONFIG) {
         if (config.getFn) {

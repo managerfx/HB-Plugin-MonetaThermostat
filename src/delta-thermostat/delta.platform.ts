@@ -4,7 +4,7 @@ import { DeltaThermostatPlatformAccessory } from './delta-thermostat.accessory';
 import { ThermostatProvider } from '../api/thermostat.api-provider';
 import { ThermostatPlatformConfig } from '../models/thermostat.config';
 import { DeltaPresencePlatformAccessory } from './delta-presence.accessory';
-import { BaseThermostatAccessory } from './delta-thermostat-base.accessory';
+import { BaseThermostatAccessory } from './base-thermostat.accessory';
 import { DeltaTemperatureSensorAccessory } from './delta-temperature-sensor.accessory';
 
 /**
@@ -62,7 +62,7 @@ export class DeltaThermostatPlatform implements DynamicPlatformPlugin {
     const devices: Device[] = response.zones.map((zone, index) => ({
       zoneId: zone.id,
       uniqueId: `${DELTA_PLATFORM_NAME}_${zone.id}`,
-      displayName: (this.config?.zonesNames || [])[index] || `zone_${zone.id}`,
+      displayName: (this.config?.zonesNames || [])[index] || `Thermostat Zone ${zone.id}`,
       istance: DeltaThermostatPlatformAccessory,
     }));
     devices.push({
