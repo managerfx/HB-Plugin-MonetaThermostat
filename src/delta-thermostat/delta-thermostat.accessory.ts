@@ -88,7 +88,7 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
     this.log.debug('Triggered GET HeatingThresholdTemperature');
 
     const currentZone = this.provider.getZoneById(this.zoneId);
-    const presentTemperature = currentZone.setpoints.find((s) => s.type === SetPointType.Present)?.temperature;
+    const presentTemperature = this.provider.getSetPointTemperatureByZone(currentZone, SetPointType.Present);
     return presentTemperature > currentZone.effectiveSetpoint ? presentTemperature : currentZone.effectiveSetpoint;
   }
 
@@ -99,7 +99,7 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
 
   private handleHeatingThresholdTemperatureGet(): number {
     this.log.debug('Triggered GET HeatingThresholdTemperature');
-    return this.provider.getZoneById(this.zoneId)?.setpoints.find((s) => s.type === SetPointType.Absent)?.temperature;
+    return this.provider.getSetPointTemperatureByZone(this.provider.getZoneById(this.zoneId), SetPointType.Absent);
   }
 
   private handleHeatingThresholdTemperatureSet(absentTemperature: number): void {

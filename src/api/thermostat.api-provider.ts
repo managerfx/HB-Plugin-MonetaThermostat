@@ -52,7 +52,10 @@ export class ThermostatProvider {
     this.getState();
   }
 
-  private async thermostatApi(requestType: RequestType, request?: Subset<ThermostatModel>): Promise<ThermostatModel> {
+  private async thermostatApi(
+    requestType: RequestType,
+    request?: Subset<ThermostatModel>
+  ): Promise<Partial<ThermostatModel>> {
     const composedRequest = {
       ...request,
       request_type: requestType,
@@ -75,7 +78,8 @@ export class ThermostatProvider {
       })
       .catch((err) => {
         this.log.error(err?.message || 'Error calling thermostat API', err);
-        throw err;
+        return this.store?.data;
+        // throw err;
       });
   }
 
@@ -152,7 +156,7 @@ export class ThermostatProvider {
     } = {
       [TargetHeatingCoolingState.AUTO]: this.setAutoTargetState.bind(this),
       [TargetHeatingCoolingState.COOL]: () => new Promise(() => null),
-      [TargetHeatingCoolingState.HEAT]: () => new Promise(() => null),
+      [TargetHeatingCoolingState.HEAT]: this.setHeatTargetState.bind(this),
       [TargetHeatingCoolingState.OFF]: this.setOffTargetState.bind(this),
     };
     return TARGET_STATE_MAP[state]().then((response) => !!response);
@@ -196,6 +200,31 @@ export class ThermostatProvider {
     return this.thermostatApi(RequestType.Setpoint, request);
   }
 
+  private async setHeatTargetState(): Promise<unknown> {
+    const zones = this.store?.data?.zones?.map((zone) => {
+      const presentTemperature = this.getSetPointTemperatureByZone(zone, SetPointType.Present) || 21;
+      return {
+        id: zone.id,
+        mode: ZoneMode.Manual,
+        currentManualTemperature: presentTemperature,
+        setpoints: [
+          {
+            type: SetPointType.Effective,
+            temperature: presentTemperature,
+          },
+        ],
+      };
+    });
+
+    const request: Subset<ThermostatModel> = {
+      request_type: RequestType.Setpoint,
+      unitCode: this.store?.data?.unitCode,
+      category: this.store?.data?.category,
+      zones,
+    };
+    return this.thermostatApi(RequestType.Setpoint, request);
+  }
+
   private slowRequestExample<T>(timer: number, outValue: T): Promise<T> {
     return new Promise((resolve) => setTimeout(resolve, timer, outValue));
   }
@@ -226,12 +255,11 @@ export class ThermostatProvider {
   ): Promise<unknown> {
     const skipPresent =
       !presentTemperature ||
-      this.getZoneById(zoneId).setpoints.find((s) => s.type === SetPointType.Present)?.temperature ===
-        presentTemperature;
+      this.getSetPointTemperatureByZone(this.getZoneById(zoneId), SetPointType.Present) === presentTemperature;
 
     const skipAbsent =
       !absentTemperature ||
-      this.getZoneById(zoneId).setpoints.find((s) => s.type === SetPointType.Absent)?.temperature === absentTemperature;
+      this.getSetPointTemperatureByZone(this.getZoneById(zoneId), SetPointType.Absent) === absentTemperature;
 
     const setpoints: Setpoint[] = [];
     if (!skipPresent) {
@@ -246,7 +274,7 @@ export class ThermostatProvider {
         temperature: absentTemperature,
       });
     }
-    this.log.debug('sepoinst: ', setpoints);
+    this.log.debug('request setpoints: ', setpoints);
     if (setpoints.length === 0) {
       this.log.debug('setPresentAbsentTemperatureByZoneId - update not required. Skipping API call...');
       return;
@@ -268,6 +296,10 @@ export class ThermostatProvider {
 
   public getThermostatPresence(): boolean {
     return this.getZoneById(this.DEFAULT_ZONE_ID).atHome;
+  }
+
+  public getSetPointTemperatureByZone(zone: Zone, setPointType: SetPointType): number {
+    return zone?.setpoints?.find((s) => s.type === setPointType)?.temperature;
   }
 }
 
