@@ -43,7 +43,7 @@ export class ThermostatProvider {
     return this.store?.data;
   }
 
-  private refreshState(): void {
+  private asyncRefreshState(): void {
     this.store = {
       ...this.store,
       expirationDate: null,
@@ -71,7 +71,7 @@ export class ThermostatProvider {
 
         // if is set request (eg: update termperature), then previus data is not valid
         if (requestType !== RequestType.Full) {
-          this.refreshState();
+          this.asyncRefreshState();
         }
 
         return response?.data;
@@ -155,7 +155,7 @@ export class ThermostatProvider {
       [key in TargetHeatingCoolingState]: () => Promise<void | unknown>;
     } = {
       [TargetHeatingCoolingState.AUTO]: this.setAutoTargetState.bind(this),
-      [TargetHeatingCoolingState.COOL]: () => new Promise(() => null),
+      [TargetHeatingCoolingState.COOL]: () => new Promise(() => this.asyncRefreshState()),
       [TargetHeatingCoolingState.HEAT]: this.setHeatTargetState.bind(this),
       [TargetHeatingCoolingState.OFF]: this.setOffTargetState.bind(this),
     };

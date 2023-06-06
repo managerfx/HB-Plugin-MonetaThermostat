@@ -61,7 +61,7 @@ export class DeltaThermostatPlatform implements DynamicPlatformPlugin {
     // or a user-defined array in the platform config.
     const devices: Device[] = response.zones.map((zone, index) => ({
       zoneId: zone.id,
-      uniqueId: `${DELTA_PLATFORM_NAME}_${zone.id}`,
+      uniqueId: `${DELTA_PLATFORM_NAME}_${response.category}_${zone.id}`,
       displayName: (this.config?.zonesNames || [])[index] || `Thermostat Zone ${zone.id}`,
       istance: DeltaThermostatPlatformAccessory,
     }));

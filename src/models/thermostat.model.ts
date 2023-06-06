@@ -78,7 +78,9 @@ export enum RequestType {
 }
 
 export enum Category {
-  Heating = 'heating',
+  Heating = 'heating', // inverno, riscaldamento disponibile
+  Cooling = 'cooling', // estate, raffrescamento disponibile
+  Off = 'off', // riescaldamento / raffrescamento non disponibile
 }
 
 export enum SeasonName {

@@ -85,7 +85,7 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
   }
 
   private handleCoolingThresholdTemperatureGet(): number {
-    this.log.debug('Triggered GET HeatingThresholdTemperature');
+    this.log.debug('Triggered GET CoolingThresholdTemperature');
 
     const currentZone = this.provider.getZoneById(this.zoneId);
     const presentTemperature = this.provider.getSetPointTemperatureByZone(currentZone, SetPointType.Present);
@@ -198,8 +198,8 @@ const CONFIG_TARGET_STATE: {
   [TargetHeatingCoolingState.OFF]: (mode: ZoneMode) => mode === ZoneMode.Off,
   [TargetHeatingCoolingState.AUTO]: (mode: ZoneMode) =>
     [ZoneMode.Auto, ZoneMode.Holiday, ZoneMode.Party].includes(mode),
-  [TargetHeatingCoolingState.HEAT]: (mode: ZoneMode, currentSeason: SeasonName.Winter) =>
+  [TargetHeatingCoolingState.HEAT]: (mode: ZoneMode, currentSeason: SeasonName) =>
     mode === ZoneMode.Manual && currentSeason === SeasonName.Winter,
-  [TargetHeatingCoolingState.COOL]: (mode: ZoneMode, currentSeason: SeasonName.Winter) =>
-    mode === ZoneMode.Manual && currentSeason !== SeasonName.Winter,
+  [TargetHeatingCoolingState.COOL]: (mode: ZoneMode, currentSeason: SeasonName) =>
+    mode === ZoneMode.Manual && currentSeason === SeasonName.Summer,
 };

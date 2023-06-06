@@ -1,6 +1,4 @@
-import { ThermostatModel } from './thermostat.model';
-
-export const FULL_BO_RESP = {
+export const FULL_BO_RESP_HEATING = {
   provider: 'A2A',
   unitCode: '1021_0A_00_090_00',
   measureUnit: '°C',
@@ -205,4 +203,4 @@ export const FULL_BO_RESP = {
   setpoints_minutes: ['00', '30'],
   same_mode_for_all_zones: true,
   modal_expiration: false,
-} as ThermostatModel;
+};
