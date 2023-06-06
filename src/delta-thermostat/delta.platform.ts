@@ -59,10 +59,10 @@ export class DeltaThermostatPlatform implements DynamicPlatformPlugin {
     }
     // A real plugin you would discover accessories from the local network, cloud services
     // or a user-defined array in the platform config.
-    const devices: Device[] = response.zones.map((zone, index) => ({
+    const devices: Device[] = response.zones.map((zone) => ({
       zoneId: zone.id,
-      uniqueId: `${DELTA_PLATFORM_NAME}_${response.category}_${zone.id}`,
-      displayName: (this.config?.zonesNames || [])[index] || `Thermostat Zone ${zone.id}`,
+      uniqueId: `${DELTA_PLATFORM_NAME}_${zone.id}`,
+      displayName: (this.config?.zonesNames || [])[+zone.id - 1] || `Thermostat Zone ${zone.id}`,
       istance: DeltaThermostatPlatformAccessory,
     }));
     devices.push({
