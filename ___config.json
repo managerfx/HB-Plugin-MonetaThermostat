@@ -1,0 +1,41 @@
+{
+    "bridge": {
+        "name": "Homebridge C5B1",
+        "username": "0E:A4:B9:78:7B:1C",
+        "port": 51430,
+        "pin": "290-89-216",
+        "advertiser": "avahi"
+    },
+    "accessories": [],
+    "platforms": [
+        {
+            "name": "Config",
+            "port": 8581,
+            "platform": "config"
+        },
+        {
+            "platform": "tasmotaControl"
+        },
+        {
+            "mqtt": {
+                "base_topic": "zigbee2mqtt",
+                "server": "mqtt://192.168.1.3:1883",
+                "reject_unauthorized": false,
+                "keepalive": 60,
+                "version": 4,
+                "disable_qos": false
+            },
+            "defaults": {
+                "exclude": false
+            },
+            "exclude_grouped_devices": false,
+            "platform": "zigbee2mqtt"
+        },
+        {
+            "name": "Moneta Thermostat",
+            "platform": "moneta-thermostat-platform",
+            "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiI3IiwianRpIjoiZTJmOGEwODljODVmMTBjOWYwZmQ4NDc3NjU5OTg4MmY4ZGMzNTNkZGRjMjMxY2U4NTJjMWYzNzdiNGNhOGRhNDVhMTMwNDg5YTI2ZmEwNmUiLCJpYXQiOjE2NTg0MjgxMzQuMzM1NTE2LCJuYmYiOjE2NTg0MjgxMzQuMzM1NTIsImV4cCI6MTY4OTk2NDEzNC4zMjYzODgsInN1YiI6IjE1MDI2Iiwic2NvcGVzIjpbXX0.m7k1Bp9XS4cn3QtYyNwfDrKC1OwKBK3eiK795h_FUAJkcX-edv3O_KVs3BR2nvnNf8ngXollEYUYgd0wksPNBGUSR7l_tL9SpRic41ShMBcKW14NYFdzYG8kDG50hm-dxLca6lxbivRTU8BsgQLSvX35b2Id-GBeGCCc-K_ZI3iSMLlvy2ssMcBExnkFfBRU-rnFTU9Lm11UgGkocHETaP9NjhfpQixxfRKBu0_0SVJIdMOyRFmLb-5axjCZBt8FKbb8nFBxwjoob79ryr35dW0u-9CK8tmxnYEtJ2Wg2RrV3KC-TdU5zjpE13yElBXMrRPgFoHQC6eylJHVlyIGi1C0LfKoec3Ieub-R2NyXxV0E-Bl7sYKgf0EshvlAe5znJ8d95PHDBZKFEo-Gg97_Ca8hCyC15MxXLAsye41nrytejrJjGYVe5SEbkDtE_1KB0Rhh75JG30G8mWBBK_sFufBtOwl4YnhRGuCAkYjsaWgjH1D7poovEqPU0V69eGWgL78I7P0OQJcUpCroOQp17dvoQiNucNQkIR3wB4ivAGaHf2tF6SLVnsaw6TgK-WclbzGNypwOagMd1mTT4wpZURTZzJwRiHjgBPN1ehcbaQKTUN7FhkyMajKWvzDA8IAcl0NsDhF4ACBepgiW1ee-VlsE24kktN_Mqua7kGk4Bw",
+            "zonesNames": ["Soggiorno", "Camera da Letto", "Cameretta"]
+        }
+    ]
+}

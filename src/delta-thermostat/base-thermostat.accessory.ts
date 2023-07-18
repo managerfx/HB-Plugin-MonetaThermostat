@@ -62,7 +62,7 @@ export class BaseThermostatAccessory {
       const characteristic = this.serviceAccessory.getCharacteristic(current.characteristic);
 
       if (current?.props) {
-        this.log.debug(current.characteristic.name, current.props);
+        this.log.debug('Setting ' + current.characteristic.name, current.props);
         characteristic.setProps(current?.props);
       }
       if (current?.getFn) {

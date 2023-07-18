@@ -1,5 +1,5 @@
 import { PlatformAccessory } from 'homebridge';
-import { SeasonName, SetPointType, ZoneMode } from '../models/thermostat.model';
+import { Category, SeasonName, SetPointType, ZoneMode } from '../models/thermostat.model';
 import { ThermostatProvider } from '../api/thermostat.api-provider';
 import { DeltaThermostatPlatform } from './delta.platform';
 import { filterStateByZoneId } from '../utility.fuctions';
@@ -52,24 +52,48 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
       getFn: this.handleTemperatureDisplayUnitsGet,
     },
     {
+      // Viene usato solo modalità AUTO. è la temperatura più ALTA che vuoi in casa
       characteristic: this.Characteristic.CoolingThresholdTemperature,
       getFn: this.handleCoolingThresholdTemperatureGet,
       setFn: this.handleCoolingThresholdTemperatureSet,
-      props: {
-        maxValue: this.provider.getCurrentState().limits.present_max_temp,
-        minValue: this.provider.getCurrentState().limits.present_min_temp,
-        minStep: this.provider.getCurrentState().limits.step_value,
-      },
+      // quando sono in modalità INVERNO la temperatura più ALTA in casa la voglio se sono Presente
+      ...(this.provider.getCurrentState().category === Category.Heating && {
+        props: {
+          maxValue: this.provider.getCurrentState().limits.present_max_temp,
+          minValue: this.provider.getCurrentState().limits.present_min_temp,
+          minStep: this.provider.getCurrentState().limits.step_value,
+        },
+      }),
+      // quando sono in modalità ESTATE la temperatura più ALTA in casa la voglio se sono Assente
+      ...(this.provider.getCurrentState().category === Category.Cooling && {
+        props: {
+          maxValue: this.provider.getCurrentState().limits.absent_max_temp,
+          minValue: this.provider.getCurrentState().limits.absent_min_temp,
+          minStep: this.provider.getCurrentState().limits.step_value,
+        },
+      }),
     },
     {
-      characteristic: this.Characteristic.HeatingThresholdTemperature, // AUTO mode MIN temperature value
+      // Viene usato solo modalità AUTO. è la temperatura più BASSA che vuoi in casa
+      characteristic: this.Characteristic.HeatingThresholdTemperature,
       getFn: this.handleHeatingThresholdTemperatureGet,
       setFn: this.handleHeatingThresholdTemperatureSet,
-      props: {
-        maxValue: this.provider.getCurrentState().limits.absent_max_temp,
-        minValue: this.provider.getCurrentState().limits.absent_min_temp,
-        minStep: this.provider.getCurrentState().limits.step_value,
-      },
+      // quando sono in modalità INVERNO la temperatura più BASSA in casa la voglio se sono Assente
+      ...(this.provider.getCurrentState().category === Category.Heating && {
+        props: {
+          maxValue: this.provider.getCurrentState().limits.absent_max_temp,
+          minValue: this.provider.getCurrentState().limits.absent_min_temp,
+          minStep: this.provider.getCurrentState().limits.step_value,
+        },
+      }),
+      // quando sono in modalità ESTATE la temperatura più BASSA in casa la voglio se sono Presente
+      ...(this.provider.getCurrentState().category === Category.Cooling && {
+        props: {
+          maxValue: this.provider.getCurrentState().limits.present_max_temp,
+          minValue: this.provider.getCurrentState().limits.present_min_temp,
+          minStep: this.provider.getCurrentState().limits.step_value,
+        },
+      }),
     },
   ];
 
@@ -84,27 +108,52 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
     this.initCharacteristicHandlers();
   }
 
+  //Viene usato solo modalità AUTO. è la temperatura più ALTA che vuoi in casa
   private handleCoolingThresholdTemperatureGet(): number {
     this.log.debug('Triggered GET CoolingThresholdTemperature');
-
     const currentZone = this.provider.getZoneById(this.zoneId);
-    const presentTemperature = this.provider.getSetPointTemperatureByZone(currentZone, SetPointType.Present);
-    return presentTemperature > currentZone.effectiveSetpoint ? presentTemperature : currentZone.effectiveSetpoint;
+    if (this.provider.getCurrentState().category === Category.Heating) {
+      const temperature = this.provider.getSetPointTemperatureByZone(currentZone, SetPointType.Present);
+      return temperature > currentZone.effectiveSetpoint ? temperature : currentZone.effectiveSetpoint;
+    }
+    if (this.provider.getCurrentState().category === Category.Cooling) {
+      const temperature = this.provider.getSetPointTemperatureByZone(currentZone, SetPointType.Absent);
+      return temperature;
+    }
   }
 
-  private handleCoolingThresholdTemperatureSet(presentTemperature: number): void {
-    this.log.debug('Triggered SET CoolingThresholdTemperature', presentTemperature || 'no val');
-    this.provider.setPresentAbsentTemperatureByZoneId(this.zoneId, presentTemperature);
+  // Viene usato solo modalità AUTO. è la temperatura più ALTA che vuoi in casa
+  private handleCoolingThresholdTemperatureSet(maxTemperatureAtHome: number): void {
+    this.log.debug('Triggered SET CoolingThresholdTemperature', maxTemperatureAtHome || 'no val');
+
+    if (this.provider.getCurrentState().category === Category.Heating) {
+      this.provider.setPresentAbsentTemperatureByZoneId(this.zoneId, maxTemperatureAtHome);
+    }
+    if (this.provider.getCurrentState().category === Category.Cooling) {
+      this.provider.setPresentAbsentTemperatureByZoneId(this.zoneId, null, maxTemperatureAtHome);
+    }
   }
 
+  //Viene usato solo modalità AUTO. è la temperatura più BASSA che vuoi in casa
   private handleHeatingThresholdTemperatureGet(): number {
     this.log.debug('Triggered GET HeatingThresholdTemperature');
-    return this.provider.getSetPointTemperatureByZone(this.provider.getZoneById(this.zoneId), SetPointType.Absent);
+    if (this.provider.getCurrentState().category === Category.Heating) {
+      return this.provider.getSetPointTemperatureByZone(this.provider.getZoneById(this.zoneId), SetPointType.Absent);
+    }
+    if (this.provider.getCurrentState().category === Category.Cooling) {
+      return this.provider.getSetPointTemperatureByZone(this.provider.getZoneById(this.zoneId), SetPointType.Present);
+    }
   }
 
-  private handleHeatingThresholdTemperatureSet(absentTemperature: number): void {
-    this.log.debug('Triggered SET HeatingThresholdTemperature', absentTemperature || 'no val');
-    this.provider.setPresentAbsentTemperatureByZoneId(this.zoneId, null, absentTemperature);
+  // Viene usato solo modalità AUTO. è la temperatura più BASSA che vuoi in casa
+  private handleHeatingThresholdTemperatureSet(minTemperatureAtHome: number): void {
+    this.log.debug('Triggered SET HeatingThresholdTemperature', minTemperatureAtHome || 'no val');
+    if (this.provider.getCurrentState().category === Category.Heating) {
+      this.provider.setPresentAbsentTemperatureByZoneId(this.zoneId, null, minTemperatureAtHome);
+    }
+    if (this.provider.getCurrentState().category === Category.Cooling) {
+      this.provider.setPresentAbsentTemperatureByZoneId(this.zoneId, minTemperatureAtHome);
+    }
   }
 
   /**
@@ -112,7 +161,7 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
    */
   private handleCurrentHeatingCoolingStateGet(): CurrentHeatingCoolingState {
     this.log.debug('Triggered GET CurrentHeatingCoolingState');
-    return this.getCurrentState();
+    return this.getCurrentHeatingCoolingState();
   }
 
   /**
@@ -173,7 +222,7 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
   //   this.log.debug('Triggered SET TemperatureDisplayUnits:', value);
   // }
 
-  private getCurrentState(): CurrentHeatingCoolingState {
+  private getCurrentHeatingCoolingState(): CurrentHeatingCoolingState {
     const currentState = this.provider.getCurrentState();
     const currentZone = filterStateByZoneId(this.zoneId)(currentState);
 

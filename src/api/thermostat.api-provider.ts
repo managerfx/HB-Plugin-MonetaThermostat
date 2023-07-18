@@ -253,6 +253,10 @@ export class ThermostatProvider {
     presentTemperature?: number,
     absentTemperature?: number
   ): Promise<unknown> {
+    this.log.info(
+      `setPresentAbsentTemperatureByZoneId - zone: ${zoneId}, presentTemperature: ${presentTemperature}, absentTemperature: ${absentTemperature}`
+    );
+
     const skipPresent =
       !presentTemperature ||
       this.getSetPointTemperatureByZone(this.getZoneById(zoneId), SetPointType.Present) === presentTemperature;
