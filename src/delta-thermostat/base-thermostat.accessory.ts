@@ -87,7 +87,9 @@ export class BaseThermostatAccessory {
           const characteristic = this.serviceAccessory.getCharacteristic(config.characteristic);
           const newValue = config.getFn.bind(this)(); // calling handler function to caluculate new value
 
-          this.log.debug(`Updating ${config.characteristic.name} with value:`, newValue);
+          this.log.debug(
+            `Updating ${config.characteristic.name} with value: ${newValue} ${config.logDescription || ''}`
+          );
           characteristic.updateValue(newValue);
         }
       }
@@ -99,6 +101,7 @@ export type CharacteristicHandlerMapItem = {
   characteristic: WithUUID<{
     new (): Characteristic;
   }>;
+  logDescription?: string;
   getFn: () => string | number;
   setFn?: (args: unknown) => void;
   props?: PartialAllowingNull<CharacteristicProps>;

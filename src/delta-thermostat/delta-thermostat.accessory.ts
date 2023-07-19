@@ -29,21 +29,32 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
       getFn: this.handleCurrentHeatingCoolingStateGet,
     },
     {
-      characteristic: this.Characteristic.TargetHeatingCoolingState, // MANUAL mode. If season is Summer???
+      characteristic: this.Characteristic.TargetHeatingCoolingState,
+      logDescription: 'select modalità',
       getFn: this.handleTargetHeatingCoolingStateGet,
       setFn: this.handleTargetHeatingCoolingStateSet,
+      props: {
+        validValues: [TargetHeatingCoolingState.AUTO, TargetHeatingCoolingState.COOL, TargetHeatingCoolingState.OFF],
+      },
     },
     {
       characteristic: this.Characteristic.CurrentTemperature,
       getFn: this.handleCurrentTemperatureGet,
     },
     {
-      characteristic: this.Characteristic.TargetTemperature, // MANUAL mode
+      characteristic: this.Characteristic.TargetTemperature,
+      logDescription: 'mode MANUAL: temperatura che vuoi raggiungere in casa',
       getFn: this.handleTargetTemperatureGet,
       setFn: this.handleTargetTemperatureSet,
       props: {
-        maxValue: this.provider.getCurrentState().limits.present_max_temp,
-        minValue: this.provider.getCurrentState().limits.present_min_temp,
+        minValue: Math.min(
+          this.provider.getCurrentState().limits.present_min_temp,
+          this.provider.getCurrentState().limits.absent_min_temp
+        ),
+        maxValue: Math.max(
+          this.provider.getCurrentState().limits.present_max_temp,
+          this.provider.getCurrentState().limits.absent_max_temp
+        ),
         minStep: this.provider.getCurrentState().limits.step_value,
       },
     },
@@ -54,6 +65,7 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
     {
       // Viene usato solo modalità AUTO. è la temperatura più ALTA che vuoi in casa
       characteristic: this.Characteristic.CoolingThresholdTemperature,
+      logDescription: 'mode AUTO: temperatura più ALTA che vuoi in casa',
       getFn: this.handleCoolingThresholdTemperatureGet,
       setFn: this.handleCoolingThresholdTemperatureSet,
       // quando sono in modalità INVERNO la temperatura più ALTA in casa la voglio se sono Presente
@@ -76,6 +88,7 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
     {
       // Viene usato solo modalità AUTO. è la temperatura più BASSA che vuoi in casa
       characteristic: this.Characteristic.HeatingThresholdTemperature,
+      logDescription: 'mode AUTO: temperatura più BASSA che vuoi in casa',
       getFn: this.handleHeatingThresholdTemperatureGet,
       setFn: this.handleHeatingThresholdTemperatureSet,
       // quando sono in modalità INVERNO la temperatura più BASSA in casa la voglio se sono Assente
@@ -181,7 +194,7 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
    * Handle requests to set the 'Target Heating Cooling State' characteristic
    */
   private handleTargetHeatingCoolingStateSet(value: TargetHeatingCoolingState): void {
-    this.log.debug('Triggered SET TargetHeatingCoolingState:', value || 'no val');
+    this.log.error('Triggered SET TargetHeatingCoolingState:', value || 'no val');
     this.provider.setTargetState(value);
   }
 
@@ -209,7 +222,14 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
   private handleTargetTemperatureSet(manualTemperature: number): void {
     this.log.debug('Triggered SET TargetTemperature:', manualTemperature || 'no val');
     if (this.handleTargetHeatingCoolingStateGet() != TargetHeatingCoolingState.AUTO) {
-      this.provider.setCurrentMananualTemperatureByZoneId(this.zoneId, manualTemperature);
+      const limits = this.provider.getCurrentState().limits;
+      const temperatoreInRange =
+        manualTemperature >= limits.present_min_temp && manualTemperature <= limits.present_max_temp;
+
+      this.provider.setCurrentMananualTemperatureByZoneId(
+        this.zoneId,
+        temperatoreInRange ? manualTemperature : limits.present_min_temp
+      );
     }
   }
 
@@ -226,17 +246,17 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
     const currentState = this.provider.getCurrentState();
     const currentZone = filterStateByZoneId(this.zoneId)(currentState);
 
-    if (currentZone?.mode === ZoneMode.Off) {
-      return CurrentHeatingCoolingState.OFF;
-    } else if (currentState?.season?.id === SeasonName.Winter) {
-      return currentZone?.temperature < currentZone?.effectiveSetpoint
-        ? CurrentHeatingCoolingState.HEAT
-        : CurrentHeatingCoolingState.OFF;
-    } else {
-      return currentZone?.temperature > currentZone?.effectiveSetpoint
-        ? CurrentHeatingCoolingState.COOL
-        : CurrentHeatingCoolingState.OFF;
+    if (currentZone?.mode !== ZoneMode.Off && currentState?.category === Category.Heating && currentZone.atHome) {
+      return CurrentHeatingCoolingState.HEAT;
+    } else if (
+      currentZone?.mode !== ZoneMode.Off &&
+      currentState?.category === Category.Cooling &&
+      currentZone.atHome
+    ) {
+      // in modalità ESTATE le ventole del raffrescamento sono sempre accese anche al minimo
+      return CurrentHeatingCoolingState.COOL;
     }
+    return CurrentHeatingCoolingState.OFF;
   }
 }
 

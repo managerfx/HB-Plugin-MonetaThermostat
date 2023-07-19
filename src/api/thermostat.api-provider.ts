@@ -155,8 +155,8 @@ export class ThermostatProvider {
       [key in TargetHeatingCoolingState]: () => Promise<void | unknown>;
     } = {
       [TargetHeatingCoolingState.AUTO]: this.setAutoTargetState.bind(this),
-      [TargetHeatingCoolingState.COOL]: () => new Promise(() => this.asyncRefreshState()),
-      [TargetHeatingCoolingState.HEAT]: this.setHeatTargetState.bind(this),
+      [TargetHeatingCoolingState.COOL]: this.setHeatCoolTargetState.bind(this),
+      [TargetHeatingCoolingState.HEAT]: this.setHeatCoolTargetState.bind(this),
       [TargetHeatingCoolingState.OFF]: this.setOffTargetState.bind(this),
     };
     return TARGET_STATE_MAP[state]().then((response) => !!response);
@@ -200,7 +200,7 @@ export class ThermostatProvider {
     return this.thermostatApi(RequestType.Setpoint, request);
   }
 
-  private async setHeatTargetState(): Promise<unknown> {
+  private async setHeatCoolTargetState(): Promise<unknown> {
     const zones = this.store?.data?.zones?.map((zone) => {
       const presentTemperature = this.getSetPointTemperatureByZone(zone, SetPointType.Present) || 21;
       return {
