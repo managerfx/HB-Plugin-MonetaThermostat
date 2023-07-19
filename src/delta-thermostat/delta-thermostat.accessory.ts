@@ -34,7 +34,13 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
       getFn: this.handleTargetHeatingCoolingStateGet,
       setFn: this.handleTargetHeatingCoolingStateSet,
       props: {
-        validValues: [TargetHeatingCoolingState.AUTO, TargetHeatingCoolingState.COOL, TargetHeatingCoolingState.OFF],
+        validValues: [
+          this.provider.getCurrentState().category === Category.Cooling
+            ? TargetHeatingCoolingState.COOL
+            : TargetHeatingCoolingState.HEAT,
+          TargetHeatingCoolingState.AUTO,
+          TargetHeatingCoolingState.OFF,
+        ],
       },
     },
     {
