@@ -61,7 +61,7 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
           this.provider.getCurrentState().limits.present_max_temp,
           this.provider.getCurrentState().limits.absent_max_temp
         ),
-        minStep: this.provider.getCurrentState().limits.step_value,
+        minStep: 0.5, // this.provider.getCurrentState().limits.step_value,
       },
     },
     {
@@ -87,7 +87,7 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
         props: {
           maxValue: this.provider.getCurrentState().limits.absent_max_temp,
           minValue: this.provider.getCurrentState().limits.absent_min_temp,
-          minStep: this.provider.getCurrentState().limits.step_value,
+          minStep: 0.5, //this.provider.getCurrentState().limits.step_value,
         },
       }),
     },
@@ -110,7 +110,7 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
         props: {
           maxValue: this.provider.getCurrentState().limits.present_max_temp,
           minValue: this.provider.getCurrentState().limits.present_min_temp,
-          minStep: this.provider.getCurrentState().limits.step_value,
+          minStep: 0.5, //this.provider.getCurrentState().limits.step_value,
         },
       }),
     },
