@@ -54,15 +54,9 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
       getFn: this.handleTargetTemperatureGet,
       setFn: this.handleTargetTemperatureSet,
       props: {
-        minValue: Math.min(
-          this.provider.getCurrentState().limits.present_min_temp,
-          this.provider.getCurrentState().limits.absent_min_temp
-        ),
-        maxValue: Math.max(
-          this.provider.getCurrentState().limits.present_max_temp,
-          this.provider.getCurrentState().limits.absent_max_temp
-        ),
-        minStep: this.provider.getCurrentState().limits.step_value,
+        minValue: this.provider.getCurrentState().manual_limits.min_temp,
+        maxValue: this.provider.getCurrentState().manual_limits.max_temp,
+        minStep: this.provider.getCurrentState().manual_limits.step_value,
       },
     },
     {
