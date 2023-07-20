@@ -1,4 +1,4 @@
-import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, Service, Characteristic } from 'homebridge';
+import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, Service, Characteristic, uuid } from 'homebridge';
 import { DELTA_PLATFORM_NAME, PLUGIN_NAME } from '../settings';
 import { DeltaThermostatPlatformAccessory } from './delta-thermostat.accessory';
 import { ThermostatProvider } from '../api/thermostat.api-provider';
@@ -59,58 +59,70 @@ export class DeltaThermostatPlatform implements DynamicPlatformPlugin {
     }
     // A real plugin you would discover accessories from the local network, cloud services
     // or a user-defined array in the platform config.
-    const devices: Device[] = response.zones.map((zone) => ({
+    const identifedDevices: Device[] = response.zones.map((zone) => ({
       zoneId: zone.id,
-      uniqueId: `${DELTA_PLATFORM_NAME}_${zone.id}`,
+      uniqueName: `${DELTA_PLATFORM_NAME}_${zone.id}`,
       displayName: (this.config?.zonesNames || [])[+zone.id - 1] || `Thermostat Zone ${zone.id}`,
       istance: DeltaThermostatPlatformAccessory,
     }));
-    devices.push({
-      uniqueId: `${DELTA_PLATFORM_NAME}_at_home`,
+    identifedDevices.push({
+      uniqueName: `${DELTA_PLATFORM_NAME}_at_home`,
       displayName: 'Thermostat Presence',
       istance: DeltaPresencePlatformAccessory,
     });
-    devices.push({
-      uniqueId: `${DELTA_PLATFORM_NAME}_external_temperature`,
+    identifedDevices.push({
+      uniqueName: `${DELTA_PLATFORM_NAME}_external_temperature`,
       displayName: 'External Temperature Sensor',
       istance: DeltaTemperatureSensorAccessory,
     });
 
-    // loop over the discovered devices and register each one if it has not already been registered
-    for (const device of devices) {
+    const devicesUUID: (Device & { UUID: string })[] = identifedDevices.map((device) =>
       // generate a unique id for the accessory this should be generated from
-      // something globally unique, but constant, for example, the device serial
-      // number or MAC address
-      const uuid = this.api.hap.uuid.generate(device.uniqueId);
+      // something globally unique, but constant, for example, the device serial number or MAC address
+      ({
+        ...device,
+        UUID: this.api.hap.uuid.generate(device.uniqueName),
+      })
+    );
+
+    // it is possible to remove platform accessories at any time using `api.unregisterPlatformAccessories`, eg.:
+    // remove platform accessories when no longer present
+    const noPresentAccessories = this.accessories.filter(
+      (accessory) => !devicesUUID.map(({ UUID }) => UUID).includes(accessory.UUID)
+    );
+    if (noPresentAccessories.length) {
+      this.log.warn(
+        'Removing existing accessory from cache:',
+        noPresentAccessories.map((acc) => acc.displayName).join(', ')
+      );
+      this.api.unregisterPlatformAccessories(PLUGIN_NAME, DELTA_PLATFORM_NAME, noPresentAccessories);
+    }
+
+    // loop over the discovered devices and register each one if it has not already been registered
+    for (const device of devicesUUID) {
+      // const uuid = this.api.hap.uuid.generate(device.uniqueId);
 
       // see if an accessory with the same uuid has already been registered and restored from
       // the cached devices we stored in the `configureAccessory` method above
-      const existingAccessory = this.accessories.find((accessory) => accessory.UUID === uuid);
+      const existingAccessory = this.accessories.find((accessory) => accessory.UUID === device.UUID);
 
       if (existingAccessory) {
         // the accessory already exists
         this.log.info('Restoring existing accessory from cache:', existingAccessory.displayName);
 
         // if you need to update the accessory.context then you should run `api.updatePlatformAccessories`. eg.:
-        // existingAccessory.context.device = device;
-        // this.api.updatePlatformAccessories([existingAccessory]);
+        existingAccessory.context.device = device;
+        this.api.updatePlatformAccessories([existingAccessory]);
 
         // create the accessory handler for the restored accessory
         // this is imported from `platformAccessory.ts`
-
         new device.istance(this, existingAccessory, this.provider, device.zoneId);
-        // new DeltaThermostatPlatformAccessory(this, existingAccessory, this.provider, device.zoneId);
-
-        // it is possible to remove platform accessories at any time using `api.unregisterPlatformAccessories`, eg.:
-        // remove platform accessories when no longer present
-        // this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
-        // this.log.info('Removing existing accessory from cache:', existingAccessory.displayName);
       } else {
         // the accessory does not yet exist, so we need to create it
         this.log.info('Adding new accessory:', device.displayName);
 
         // create a new accessory
-        const accessory = new this.api.platformAccessory(device.displayName, uuid);
+        const accessory = new this.api.platformAccessory(device.displayName, device.UUID);
 
         // store a copy of the device object in the `accessory.context`
         // the `context` property can be used to store any data about the accessory you may need
@@ -130,7 +142,7 @@ export class DeltaThermostatPlatform implements DynamicPlatformPlugin {
 
 type Device = {
   zoneId?: string;
-  uniqueId: string;
+  uniqueName: string;
   displayName: string;
   istance: typeof BaseThermostatAccessory;
 };

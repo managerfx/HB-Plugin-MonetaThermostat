@@ -52,22 +52,19 @@ export class ThermostatProvider {
     this.getState();
   }
 
-  private async thermostatApi(
-    requestType: RequestType,
-    request?: Subset<ThermostatModel>
-  ): Promise<Partial<ThermostatModel>> {
+  private async thermostatApi(requestType: RequestType, request?: Subset<ThermostatModel>): Promise<any> {
     const composedRequest = {
       ...request,
       request_type: requestType,
     };
-    this.log.debug('Thermostat API - REQUEST:', composedRequest);
+    this.log.debug('Thermostat API - REQUEST: ', composedRequest);
     return this.apiIstance
-      .post<ThermostatModel>('sensors_data_request', composedRequest)
+      .post<any>('sensors_data_request', composedRequest)
       .then((response) => {
-        if (response.status !== 200 || isEmpty(response.data)) {
-          throw new Error(`Error STATUS ${response?.status}`);
+        this.log.debug('Thermostat API - RESPONSE: ', response?.data);
+        if (response.status !== 200 || isEmpty(response.data) || response?.data?.[0]?.error) {
+          throw new Error(`STATUS ${response?.status}, Message: ${response?.data?.[0]?.error}`);
         }
-        this.log.debug(`Thermostat API - RESPONSE: STATUS ${response?.status}`, response?.data);
 
         // if is set request (eg: update termperature), then previus data is not valid
         if (requestType !== RequestType.Full) {
@@ -77,7 +74,7 @@ export class ThermostatProvider {
         return response?.data;
       })
       .catch((err) => {
-        this.log.error(err?.message || 'Error calling thermostat API', err);
+        this.log.error('Error calling thermostat API', err);
         return this.store?.data;
         // throw err;
       });
