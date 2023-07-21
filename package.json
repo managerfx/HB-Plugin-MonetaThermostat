@@ -2,7 +2,7 @@
     "private": false,
     "displayName": "Moneta Plugin",
     "name": "homebridge-moneta-plugin",
-    "version": "1.1.5",
+    "version": "1.1.6",
     "description": "Integrate Delta Control Thermostat in your HB",
     "license": "Apache-2.0",
     "repository": {

@@ -80,7 +80,7 @@ export class BaseThermostatAccessory {
 
   private subscribeOnNewThermostatDataEvent() {
     this.provider.thermostatEmitter.on(RequestType.Full, () => {
-      this.log.info('New full_bo data received! Updating values...');
+      this.log.info('Updating full_bo data...');
 
       for (const config of this.CHARACTERISTIC_HANDLER_CONFIG) {
         if (config.getFn) {

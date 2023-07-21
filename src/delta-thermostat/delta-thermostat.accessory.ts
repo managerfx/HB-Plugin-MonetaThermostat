@@ -33,15 +33,7 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
       getFn: this.handleTargetHeatingCoolingStateGet,
       setFn: this.handleTargetHeatingCoolingStateSet,
       props: {
-        ...(this.provider.getCurrentState().category === Category.Cooling && {
-          validValues: [TargetHeatingCoolingState.COOL, TargetHeatingCoolingState.AUTO, TargetHeatingCoolingState.OFF],
-        }),
-        ...(this.provider.getCurrentState().category === Category.Heating && {
-          validValues: [TargetHeatingCoolingState.HEAT, TargetHeatingCoolingState.AUTO, TargetHeatingCoolingState.OFF],
-        }),
-        ...(![Category.Heating, Category.Cooling].includes(this.provider.getCurrentState().category) && {
-          validValues: [TargetHeatingCoolingState.OFF],
-        }),
+        validValues: VALID_TARGET_STATE_BY_CATEGORY_MAP[this.provider.getCurrentState().category],
       },
     },
     {
@@ -54,8 +46,14 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
       getFn: this.handleTargetTemperatureGet,
       setFn: this.handleTargetTemperatureSet,
       props: {
-        minValue: this.provider.getCurrentState().manual_limits.min_temp,
-        maxValue: this.provider.getCurrentState().manual_limits.max_temp,
+        minValue: Math.min(
+          this.provider.getCurrentState().limits.absent_min_temp,
+          this.provider.getCurrentState().manual_limits.min_temp
+        ),
+        maxValue: Math.max(
+          this.provider.getCurrentState().limits.absent_max_temp,
+          this.provider.getCurrentState().manual_limits.max_temp
+        ),
         minStep: this.provider.getCurrentState().manual_limits.step_value,
       },
     },
@@ -186,8 +184,8 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
     const zone = this.provider.getZoneById(this.zoneId);
     const season = this.provider.getCurrentState().season?.id;
 
-    return Object.keys(CONFIG_TARGET_STATE).find(
-      (key) => <TergetStateFn>CONFIG_TARGET_STATE[key](zone.mode, season)
+    return Object.keys(ZONE_MODE_TO_TARGET_STATE_MAP).find(
+      (key) => <TergetStateFn>ZONE_MODE_TO_TARGET_STATE_MAP[key](zone.mode, season)
     ) as unknown as TargetHeatingCoolingState;
   }
 
@@ -262,7 +260,7 @@ export class DeltaThermostatPlatformAccessory extends BaseThermostatAccessory {
 }
 
 type TergetStateFn = (...params: unknown[]) => boolean;
-const CONFIG_TARGET_STATE: {
+const ZONE_MODE_TO_TARGET_STATE_MAP: {
   [key in TargetHeatingCoolingState]: TergetStateFn;
 } = {
   [TargetHeatingCoolingState.OFF]: (mode: ZoneMode) => mode === ZoneMode.Off,
@@ -272,4 +270,10 @@ const CONFIG_TARGET_STATE: {
     mode === ZoneMode.Manual && currentSeason === SeasonName.Winter,
   [TargetHeatingCoolingState.COOL]: (mode: ZoneMode, currentSeason: SeasonName) =>
     mode === ZoneMode.Manual && currentSeason === SeasonName.Summer,
+};
+
+const VALID_TARGET_STATE_BY_CATEGORY_MAP: { [key in Category]: TargetHeatingCoolingState[] } = {
+  [Category.Cooling]: [TargetHeatingCoolingState.COOL, TargetHeatingCoolingState.AUTO, TargetHeatingCoolingState.OFF],
+  [Category.Heating]: [TargetHeatingCoolingState.HEAT, TargetHeatingCoolingState.AUTO, TargetHeatingCoolingState.OFF],
+  [Category.Off]: [TargetHeatingCoolingState.OFF],
 };

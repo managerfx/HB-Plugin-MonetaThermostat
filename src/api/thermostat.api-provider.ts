@@ -94,8 +94,9 @@ export class ThermostatProvider {
             pending: false,
           };
           this.log.info(
-            `Thermostat State fatched in ${Date.now() - timeStart} ms. Response is now cached until`,
-            this.store.expirationDate.toLocaleTimeString()
+            `Thermostat State fatched in ${
+              Date.now() - timeStart
+            } ms. (cached until ${this.store.expirationDate.toLocaleTimeString()})`
           );
           this.thermostatEmitter.emit(RequestType.Full);
 
