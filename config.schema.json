@@ -12,7 +12,7 @@
                 "default": "Delta Thermostat"
             },
             "accessToken": {
-                "title": "AccessToken",
+                "title": "Bearer Token",
                 "type": "string",
                 "required": true,
                 "default": ""
@@ -22,14 +22,15 @@
                 "type": "array",
                 "required": false,
                 "items": {
-                    "title": "Access Name",
+                    "title": "Zone Name",
                     "type": "string"
                 }
             },
             "thermostatPollingInterval": {
-                "title": "Polling Interval API (unit: Seconds, 60s if no setted) ",
+                "title": "Polling Interval API (unit: Seconds, 60s if no setted)",
                 "type": "number",
-                "required": false
+                "required": false,
+                "default": 60
             }
         }
     }
