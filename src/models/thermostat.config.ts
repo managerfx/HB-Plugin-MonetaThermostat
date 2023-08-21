@@ -1,7 +1,7 @@
 import { PlatformConfig } from 'homebridge';
 
 export interface ThermostatPlatformConfig extends PlatformConfig {
-  access_token: string;
+  accessToken: string;
   accessoryNames: string[];
   thermostatPollingInterval: number;
 }

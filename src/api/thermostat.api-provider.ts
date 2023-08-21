@@ -27,7 +27,7 @@ export class ThermostatProvider {
     method: 'POST',
     baseURL: 'https://portal.planetsmartcity.com/api/v3/',
     headers: {
-      Authorization: `Bearer ${this.config?.access_token}`,
+      Authorization: `Bearer ${this.config?.accessToken}`,
       'x-planet-source': 'mobile',
       'timezone-offset': '-60',
     },
