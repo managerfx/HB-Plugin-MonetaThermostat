@@ -27,10 +27,11 @@
                 }
             },
             "thermostatPollingInterval": {
-                "title": "Polling Interval API (unit: Seconds, 60s if no setted)",
+                "title": "Polling Interval API (unit: Minutes, 10 min if no setted)",
                 "type": "number",
                 "required": false,
-                "default": 60
+                "default": 10,
+                "minimum": 5
             }
         }
     }

@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { API, Logger } from 'homebridge';
-import { addTime as addToDate, filterStateByZoneId, Subset } from '../utility.fuctions';
+import { addTime, filterStateByZoneId, Subset } from '../utility.fuctions';
 import { ThermostatModel, RequestType, Zone, ZoneMode, SetPointType, Setpoint } from '../models/thermostat.model';
 import { ThermostatPlatformConfig } from '../models/thermostat.config';
 import { TargetHeatingCoolingState } from '../delta-thermostat/delta-thermostat.accessory';
@@ -25,7 +25,7 @@ export class ThermostatProvider {
 
   private apiIstance = axios.create({
     method: 'POST',
-    baseURL: 'https://portal.planetsmartcity.com/api/v3/',
+    baseURL: Buffer.from('aHR0cHM6Ly9wb3J0YWwucGxhbmV0c21hcnRjaXR5LmNvbS9hcGkvdjMv', 'base64').toString(),
     headers: {
       Authorization: `Bearer ${this.config?.accessToken}`,
       'x-planet-source': 'mobile',
@@ -89,7 +89,7 @@ export class ThermostatProvider {
         const response = await this.thermostatApi(RequestType.Full);
         if (response) {
           this.store = {
-            expirationDate: addToDate(new Date(), this.config?.thermostatPollingInterval || 60, 's'),
+            expirationDate: addTime(new Date(), Math.max(this.config?.thermostatPollingInterval || 0, 10), 'm'),
             data: response,
             pending: false,
           };
